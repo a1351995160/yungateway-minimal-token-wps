@@ -9,6 +9,11 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
+/**
+ * ClientSecretDigestService component.
+ *
+ * @author WPS
+ */
 @Service
 public class ClientSecretDigestService {
 

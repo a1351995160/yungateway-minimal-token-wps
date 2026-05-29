@@ -9,6 +9,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * CapabilityRoutePolicy component.
+ *
+ * @author WPS
+ */
 @Component
 @SuppressWarnings("java:S1075")
 public class CapabilityRoutePolicy {

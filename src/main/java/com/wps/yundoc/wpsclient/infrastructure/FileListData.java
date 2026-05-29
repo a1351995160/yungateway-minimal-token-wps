@@ -2,6 +2,11 @@ package com.wps.yundoc.wpsclient.infrastructure;
 
 import java.util.List;
 
+/**
+ * FileListData component.
+ *
+ * @author WPS
+ */
 public class FileListData {
 
     private List<FileListItemData> items;

@@ -9,6 +9,11 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * LocalWpsTokenCache component.
+ *
+ * @author WPS
+ */
 @Component
 public class LocalWpsTokenCache {
 

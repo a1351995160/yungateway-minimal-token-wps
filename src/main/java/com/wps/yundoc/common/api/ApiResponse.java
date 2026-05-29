@@ -1,5 +1,10 @@
 package com.wps.yundoc.common.api;
 
+/**
+ * ApiResponse component.
+ *
+ * @author WPS
+ */
 public class ApiResponse<T> {
 
     private final boolean success;

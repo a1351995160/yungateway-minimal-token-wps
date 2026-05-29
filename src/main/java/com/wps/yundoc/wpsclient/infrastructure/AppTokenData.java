@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+/**
+ * AppTokenData component.
+ *
+ * @author WPS
+ */
 class AppTokenData {
 
     private String accessToken;

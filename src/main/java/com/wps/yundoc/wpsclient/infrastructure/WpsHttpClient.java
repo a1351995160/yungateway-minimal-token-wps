@@ -21,6 +21,11 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Objects;
 
+/**
+ * WpsHttpClient component.
+ *
+ * @author WPS
+ */
 public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
     private final WpsClientProperties properties;
@@ -220,6 +225,11 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
     private interface WpsCall<T> {
 
+        /**
+         * Executes a single WPS request attempt.
+         *
+         * @return response from WPS
+         */
         T execute();
     }
 }

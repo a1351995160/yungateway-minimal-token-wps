@@ -9,6 +9,11 @@ import com.wps.yundoc.wpsclient.application.WpsPreviewLink;
 import com.wps.yundoc.wpsclient.application.WpsPreviewRequest;
 import org.springframework.stereotype.Service;
 
+/**
+ * AppPreviewService component.
+ *
+ * @author WPS
+ */
 @Service
 public class AppPreviewService {
 

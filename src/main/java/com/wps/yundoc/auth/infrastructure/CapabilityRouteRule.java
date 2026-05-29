@@ -4,6 +4,11 @@ import org.springframework.http.HttpMethod;
 
 import javax.servlet.http.HttpServletRequest;
 
+/**
+ * CapabilityRouteRule component.
+ *
+ * @author WPS
+ */
 class CapabilityRouteRule {
 
     private final HttpMethod method;

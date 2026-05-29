@@ -1,5 +1,10 @@
 package com.wps.yundoc.common.context;
 
+/**
+ * RequestContextBuilder component.
+ *
+ * @author WPS
+ */
 public class RequestContextBuilder {
 
     private final String requestId;

@@ -3,6 +3,11 @@ package com.wps.yundoc.wpsclient.application;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 
+/**
+ * WpsAppToken component.
+ *
+ * @author WPS
+ */
 public class WpsAppToken {
 
     private final String accessToken;

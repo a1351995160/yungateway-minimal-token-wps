@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+/**
+ * PreviewPayload component.
+ *
+ * @author WPS
+ */
 class PreviewPayload {
 
     private final String fileId;

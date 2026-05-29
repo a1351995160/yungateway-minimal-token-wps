@@ -9,6 +9,11 @@ import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
 import org.springframework.stereotype.Service;
 
+/**
+ * BusinessSystemApiPermissionService component.
+ *
+ * @author WPS
+ */
 @Service
 public class BusinessSystemApiPermissionService {
 

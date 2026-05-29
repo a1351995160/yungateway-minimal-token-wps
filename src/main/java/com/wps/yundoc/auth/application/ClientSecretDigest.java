@@ -1,5 +1,10 @@
 package com.wps.yundoc.auth.application;
 
+/**
+ * ClientSecretDigest component.
+ *
+ * @author WPS
+ */
 public class ClientSecretDigest {
 
     private final String digest;

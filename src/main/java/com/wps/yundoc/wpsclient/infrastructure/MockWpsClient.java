@@ -15,6 +15,11 @@ import com.wps.yundoc.wpsclient.application.WpsPreviewRequest;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 
+/**
+ * MockWpsClient component.
+ *
+ * @author WPS
+ */
 public class MockWpsClient implements WpsPreviewClient, WpsAppTokenClient, WpsFileClient, WpsAuthorizationClient {
 
     @Override

@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+/**
+ * WpsFileListResponse component.
+ *
+ * @author WPS
+ */
 public class WpsFileListResponse implements WpsEnvelope<FileListData> {
 
     private Integer code;

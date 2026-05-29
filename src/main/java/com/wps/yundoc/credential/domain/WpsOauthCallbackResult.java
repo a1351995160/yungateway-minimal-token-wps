@@ -1,11 +1,16 @@
 package com.wps.yundoc.credential.domain;
 
-public class WpsOAuthCallbackResult {
+/**
+ * WpsOauthCallbackResult component.
+ *
+ * @author WPS
+ */
+public class WpsOauthCallbackResult {
 
     private final String userId;
     private final String status;
 
-    public WpsOAuthCallbackResult(String userId) {
+    public WpsOauthCallbackResult(String userId) {
         this.userId = userId;
         this.status = "AUTHORIZED";
     }

@@ -6,6 +6,11 @@ import com.wps.yundoc.wpsclient.application.WpsFileItem;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * UserFileListResponse component.
+ *
+ * @author WPS
+ */
 public class UserFileListResponse {
 
     private final List<UserFileItemResponse> items;

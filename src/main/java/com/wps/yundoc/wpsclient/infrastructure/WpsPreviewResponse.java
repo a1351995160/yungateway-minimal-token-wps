@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+/**
+ * WpsPreviewResponse component.
+ *
+ * @author WPS
+ */
 class WpsPreviewResponse implements WpsEnvelope<PreviewData> {
 
     private Integer code;

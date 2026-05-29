@@ -1,5 +1,10 @@
 package com.wps.yundoc.common.error;
 
+/**
+ * YundocException component.
+ *
+ * @author WPS
+ */
 public class YundocException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;

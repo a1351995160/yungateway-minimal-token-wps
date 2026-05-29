@@ -3,6 +3,11 @@ package com.wps.yundoc.auth.api;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
+/**
+ * TokenRequest component.
+ *
+ * @author WPS
+ */
 public class TokenRequest {
 
     @NotBlank

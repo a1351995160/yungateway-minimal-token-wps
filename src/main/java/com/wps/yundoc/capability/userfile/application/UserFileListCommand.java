@@ -1,5 +1,10 @@
 package com.wps.yundoc.capability.userfile.application;
 
+/**
+ * UserFileListCommand component.
+ *
+ * @author WPS
+ */
 public class UserFileListCommand {
 
     private final String userId;

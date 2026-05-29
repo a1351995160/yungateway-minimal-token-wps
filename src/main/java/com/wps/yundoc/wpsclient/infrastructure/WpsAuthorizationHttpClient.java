@@ -17,6 +17,11 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Objects;
 
+/**
+ * WpsAuthorizationHttpClient component.
+ *
+ * @author WPS
+ */
 public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
 
     private final WpsClientProperties properties;
@@ -41,7 +46,7 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
                 .queryParam("client_id", properties.getAppId())
                 .queryParam("redirect_uri", properties.getRedirectUri())
                 .queryParam("response_type", "code")
-                .queryParam("scope", properties.getOAuthScope())
+                .queryParam("scope", properties.getOauthScope())
                 .queryParam("state", state)
                 .toUriString();
     }
@@ -85,10 +90,10 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
         return response.getData();
     }
 
-    private HttpEntity<OAuthCodePayload> entity(String code) {
+    private HttpEntity<OauthCodePayload> entity(String code) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        OAuthCodePayload payload = new OAuthCodePayload(
+        OauthCodePayload payload = new OauthCodePayload(
                 code,
                 properties.getAppId(),
                 properties.getAppSecret(),

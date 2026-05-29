@@ -6,6 +6,11 @@ import org.springframework.validation.annotation.Validated;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
+/**
+ * ClientSecretDigestProperties component.
+ *
+ * @author WPS
+ */
 @Validated
 @ConfigurationProperties(prefix = "yundoc.client-secret")
 public class ClientSecretDigestProperties {

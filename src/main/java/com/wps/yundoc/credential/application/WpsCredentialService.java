@@ -8,6 +8,11 @@ import com.wps.yundoc.wpsclient.application.WpsAppToken;
 import com.wps.yundoc.wpsclient.application.WpsAppTokenClient;
 import org.springframework.stereotype.Service;
 
+/**
+ * WpsCredentialService component.
+ *
+ * @author WPS
+ */
 @Service
 public class WpsCredentialService {
 

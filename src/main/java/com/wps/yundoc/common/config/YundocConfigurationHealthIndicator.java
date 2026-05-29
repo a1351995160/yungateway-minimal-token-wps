@@ -9,6 +9,11 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * YundocConfigurationHealthIndicator component.
+ *
+ * @author WPS
+ */
 @Component("yundocConfiguration")
 public class YundocConfigurationHealthIndicator implements HealthIndicator {
 
@@ -56,7 +61,7 @@ public class YundocConfigurationHealthIndicator implements HealthIndicator {
                 || missing(wpsClientProperties.getAuthorizePath())
                 || missing(wpsClientProperties.getUserTokenPath())
                 || missing(wpsClientProperties.getRedirectUri())
-                || missing(wpsClientProperties.getOAuthScope())
+                || missing(wpsClientProperties.getOauthScope())
                 || missing(wpsClientProperties.getAppId())
                 || missing(wpsClientProperties.getAppSecret());
     }

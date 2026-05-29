@@ -12,6 +12,11 @@ import org.springframework.stereotype.Component;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ * AuthErrorResponseWriter component.
+ *
+ * @author WPS
+ */
 @Component
 public class AuthErrorResponseWriter {
 

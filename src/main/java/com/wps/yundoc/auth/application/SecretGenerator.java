@@ -5,6 +5,11 @@ import org.springframework.stereotype.Component;
 import java.security.SecureRandom;
 import java.util.Base64;
 
+/**
+ * SecretGenerator component.
+ *
+ * @author WPS
+ */
 @Component
 public class SecretGenerator {
 

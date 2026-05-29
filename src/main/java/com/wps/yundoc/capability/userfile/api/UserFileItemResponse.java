@@ -2,6 +2,11 @@ package com.wps.yundoc.capability.userfile.api;
 
 import com.wps.yundoc.wpsclient.application.WpsFileItem;
 
+/**
+ * UserFileItemResponse component.
+ *
+ * @author WPS
+ */
 public class UserFileItemResponse extends UserFileResponse {
 
     private final WpsFileItem item;

@@ -2,6 +2,11 @@ package com.wps.yundoc.wpsclient.application;
 
 import java.util.Objects;
 
+/**
+ * WpsPreviewRequest component.
+ *
+ * @author WPS
+ */
 public class WpsPreviewRequest {
 
     private final String fileId;

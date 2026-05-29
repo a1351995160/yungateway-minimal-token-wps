@@ -7,6 +7,11 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
+/**
+ * AppPreviewRequest component.
+ *
+ * @author WPS
+ */
 public class AppPreviewRequest {
 
     @Valid

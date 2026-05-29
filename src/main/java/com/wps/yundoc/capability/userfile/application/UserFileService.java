@@ -9,6 +9,11 @@ import com.wps.yundoc.wpsclient.application.WpsFileList;
 import com.wps.yundoc.wpsclient.application.WpsFileListRequest;
 import org.springframework.stereotype.Service;
 
+/**
+ * UserFileService component.
+ *
+ * @author WPS
+ */
 @Service
 public class UserFileService {
 

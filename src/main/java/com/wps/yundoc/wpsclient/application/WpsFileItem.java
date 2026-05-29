@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.application;
 
+/**
+ * WpsFileItem component.
+ *
+ * @author WPS
+ */
 public class WpsFileItem {
 
     private final String fileId;

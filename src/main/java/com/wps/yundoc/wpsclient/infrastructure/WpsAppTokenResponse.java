@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+/**
+ * WpsAppTokenResponse component.
+ *
+ * @author WPS
+ */
 class WpsAppTokenResponse implements WpsEnvelope<AppTokenData> {
 
     private Integer code;

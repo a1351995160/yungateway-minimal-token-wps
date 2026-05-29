@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
+/**
+ * AppPreviewController component.
+ *
+ * @author WPS
+ */
 @RestController
 @RequestMapping("/api/v1/app")
 public class AppPreviewController {

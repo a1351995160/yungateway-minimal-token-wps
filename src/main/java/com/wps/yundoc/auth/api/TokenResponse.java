@@ -4,6 +4,11 @@ import com.wps.yundoc.auth.application.AuthToken;
 
 import java.util.List;
 
+/**
+ * TokenResponse component.
+ *
+ * @author WPS
+ */
 public class TokenResponse {
 
     private static final String TOKEN_TYPE = "Bearer";

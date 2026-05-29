@@ -19,6 +19,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * WpsFileHttpClient component.
+ *
+ * @author WPS
+ */
 public class WpsFileHttpClient implements WpsFileClient {
 
     private final WpsClientProperties properties;

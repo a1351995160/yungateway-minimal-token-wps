@@ -2,6 +2,11 @@ package com.wps.yundoc.wpsclient.application;
 
 import java.util.List;
 
+/**
+ * WpsFileList component.
+ *
+ * @author WPS
+ */
 public class WpsFileList {
 
     private final List<WpsFileItem> items;

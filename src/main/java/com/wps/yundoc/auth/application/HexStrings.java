@@ -1,5 +1,10 @@
 package com.wps.yundoc.auth.application;
 
+/**
+ * HexStrings component.
+ *
+ * @author WPS
+ */
 final class HexStrings {
 
     private static final char[] HEX = "0123456789abcdef".toCharArray();

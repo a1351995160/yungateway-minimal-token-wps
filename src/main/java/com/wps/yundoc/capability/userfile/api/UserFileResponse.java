@@ -1,5 +1,10 @@
 package com.wps.yundoc.capability.userfile.api;
 
+/**
+ * UserFileResponse component.
+ *
+ * @author WPS
+ */
 public class UserFileResponse {
 
     private final String fileId;

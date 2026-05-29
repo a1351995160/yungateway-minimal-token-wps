@@ -4,6 +4,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 
+/**
+ * WpsClientProperties component.
+ *
+ * @author WPS
+ */
 @ConfigurationProperties(prefix = "yundoc.wps-client")
 public class WpsClientProperties {
 
@@ -14,7 +19,7 @@ public class WpsClientProperties {
     private String authorizePath = "";
     private String userTokenPath = "";
     private String redirectUri = "";
-    private String oAuthScope = "";
+    private String oauthScope = "";
     private String appId = "";
     private String appSecret = "";
     private Duration connectTimeout = Duration.ofSeconds(2);
@@ -77,12 +82,12 @@ public class WpsClientProperties {
         this.redirectUri = redirectUri;
     }
 
-    public String getOAuthScope() {
-        return oAuthScope;
+    public String getOauthScope() {
+        return oauthScope;
     }
 
-    public void setOAuthScope(String oAuthScope) {
-        this.oAuthScope = oAuthScope;
+    public void setOauthScope(String oauthScope) {
+        this.oauthScope = oauthScope;
     }
 
     public String getAppId() {

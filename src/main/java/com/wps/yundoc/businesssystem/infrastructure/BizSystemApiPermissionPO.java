@@ -6,6 +6,11 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+/**
+ * BizSystemApiPermissionPO component.
+ *
+ * @author WPS
+ */
 @Getter
 @Setter
 @NoArgsConstructor

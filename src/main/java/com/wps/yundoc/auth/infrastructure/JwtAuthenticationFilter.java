@@ -19,6 +19,11 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Optional;
 
+/**
+ * JwtAuthenticationFilter component.
+ *
+ * @author WPS
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class JwtAuthenticationFilter extends OncePerRequestFilter {

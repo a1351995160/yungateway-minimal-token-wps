@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.application;
 
+/**
+ * WpsFileListRequest component.
+ *
+ * @author WPS
+ */
 public class WpsFileListRequest {
 
     private final String accessToken;

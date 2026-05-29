@@ -60,7 +60,7 @@ class YundocConfigurationHealthIndicatorTest {
         properties.setAuthorizePath("/oauth/authorize");
         properties.setUserTokenPath("/oauth/user-token");
         properties.setRedirectUri("https://gateway.example.com/api/v1/wps/oauth/callback");
-        properties.setOAuthScope("files.read");
+        properties.setOauthScope("files.read");
         properties.setAppId("wps-app-id");
         properties.setAppSecret("wps-app-secret");
         return properties;

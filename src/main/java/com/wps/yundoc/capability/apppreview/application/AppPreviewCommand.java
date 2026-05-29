@@ -1,5 +1,10 @@
 package com.wps.yundoc.capability.apppreview.application;
 
+/**
+ * AppPreviewCommand component.
+ *
+ * @author WPS
+ */
 public class AppPreviewCommand {
 
     private final String sourceType;

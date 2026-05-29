@@ -9,6 +9,11 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * LocalWpsUserTokenCache component.
+ *
+ * @author WPS
+ */
 @Component
 public class LocalWpsUserTokenCache {
 

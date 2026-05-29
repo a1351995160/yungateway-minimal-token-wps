@@ -3,6 +3,11 @@ package com.wps.yundoc.common.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+/**
+ * YundocReadinessProperties component.
+ *
+ * @author WPS
+ */
 @Validated
 @ConfigurationProperties(prefix = "yundoc.readiness")
 public class YundocReadinessProperties {

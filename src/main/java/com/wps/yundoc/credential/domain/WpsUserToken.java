@@ -2,6 +2,11 @@ package com.wps.yundoc.credential.domain;
 
 import java.time.OffsetDateTime;
 
+/**
+ * WpsUserToken component.
+ *
+ * @author WPS
+ */
 public class WpsUserToken {
 
     private final String accessToken;

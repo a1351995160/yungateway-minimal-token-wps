@@ -1,5 +1,10 @@
 package com.wps.yundoc.auth.domain;
 
+/**
+ * BusinessSystemPrincipal component.
+ *
+ * @author WPS
+ */
 public class BusinessSystemPrincipal {
 
     private final String businessSystemId;

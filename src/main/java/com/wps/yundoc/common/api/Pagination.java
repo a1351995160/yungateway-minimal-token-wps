@@ -2,6 +2,11 @@ package com.wps.yundoc.common.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+/**
+ * Pagination component.
+ *
+ * @author WPS
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Pagination {
 

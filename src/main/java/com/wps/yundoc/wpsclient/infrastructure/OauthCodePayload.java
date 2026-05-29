@@ -1,13 +1,18 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
-public class OAuthCodePayload {
+/**
+ * OauthCodePayload component.
+ *
+ * @author WPS
+ */
+public class OauthCodePayload {
 
     private final String code;
     private final String appId;
     private final String appSecret;
     private final String redirectUri;
 
-    public OAuthCodePayload(String code, String appId, String appSecret, String redirectUri) {
+    public OauthCodePayload(String code, String appId, String appSecret, String redirectUri) {
         this.code = code;
         this.appId = appId;
         this.appSecret = appSecret;

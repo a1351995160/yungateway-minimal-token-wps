@@ -1,6 +1,6 @@
 package com.wps.yundoc.credential.infrastructure;
 
-import com.wps.yundoc.credential.domain.OAuthState;
+import com.wps.yundoc.credential.domain.OauthState;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
@@ -9,24 +9,29 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * LocalOauthStateCache component.
+ *
+ * @author WPS
+ */
 @Component
-public class LocalOAuthStateCache {
+public class LocalOauthStateCache {
 
-    private final ConcurrentMap<String, OAuthState> states = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, OauthState> states = new ConcurrentHashMap<>();
     private final WpsUserAuthorizationProperties properties;
 
-    public LocalOAuthStateCache(WpsUserAuthorizationProperties properties) {
+    public LocalOauthStateCache(WpsUserAuthorizationProperties properties) {
         this.properties = properties;
     }
 
-    public void put(OAuthState state) {
+    public void put(OauthState state) {
         evictExpiredStates();
         states.put(state.getState(), state);
         evictOverflow();
     }
 
-    public Optional<OAuthState> take(String stateValue) {
-        OAuthState state = states.remove(stateValue);
+    public Optional<OauthState> take(String stateValue) {
+        OauthState state = states.remove(stateValue);
         if (state == null) {
             return Optional.empty();
         }
@@ -37,7 +42,7 @@ public class LocalOAuthStateCache {
         return states.size();
     }
 
-    private Optional<OAuthState> validState(OAuthState state) {
+    private Optional<OauthState> validState(OauthState state) {
         if (state.getExpiresAt().isBefore(OffsetDateTime.now())) {
             return Optional.empty();
         }
@@ -45,12 +50,12 @@ public class LocalOAuthStateCache {
     }
 
     private void evictExpiredStates() {
-        for (Map.Entry<String, OAuthState> entry : states.entrySet()) {
+        for (Map.Entry<String, OauthState> entry : states.entrySet()) {
             evictExpiredState(entry);
         }
     }
 
-    private void evictExpiredState(Map.Entry<String, OAuthState> entry) {
+    private void evictExpiredState(Map.Entry<String, OauthState> entry) {
         if (entry.getValue().getExpiresAt().isBefore(OffsetDateTime.now())) {
             states.remove(entry.getKey(), entry.getValue());
         }

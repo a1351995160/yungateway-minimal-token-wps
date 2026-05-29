@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+/**
+ * FileListItemData component.
+ *
+ * @author WPS
+ */
 public class FileListItemData {
 
     private String fileId;

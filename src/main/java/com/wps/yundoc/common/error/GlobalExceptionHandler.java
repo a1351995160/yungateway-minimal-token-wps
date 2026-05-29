@@ -14,6 +14,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import javax.validation.ConstraintViolationException;
 
+/**
+ * GlobalExceptionHandler component.
+ *
+ * @author WPS
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

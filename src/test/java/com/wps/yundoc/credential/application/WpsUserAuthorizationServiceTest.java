@@ -3,7 +3,7 @@ package com.wps.yundoc.credential.application;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
 import com.wps.yundoc.credential.domain.WpsUserToken;
-import com.wps.yundoc.credential.infrastructure.LocalOAuthStateCache;
+import com.wps.yundoc.credential.infrastructure.LocalOauthStateCache;
 import com.wps.yundoc.credential.infrastructure.LocalWpsUserTokenCache;
 import com.wps.yundoc.credential.infrastructure.WpsCredentialProperties;
 import com.wps.yundoc.credential.infrastructure.WpsUserAuthorizationProperties;
@@ -50,7 +50,7 @@ class WpsUserAuthorizationServiceTest {
     private WpsUserAuthorizationService service() {
         return new WpsUserAuthorizationService(
                 new LocalWpsUserTokenCache(new WpsCredentialProperties()),
-                new LocalOAuthStateCache(new WpsUserAuthorizationProperties()),
+                new LocalOauthStateCache(new WpsUserAuthorizationProperties()),
                 authorizationClient(),
                 new WpsUserAuthorizationProperties());
     }

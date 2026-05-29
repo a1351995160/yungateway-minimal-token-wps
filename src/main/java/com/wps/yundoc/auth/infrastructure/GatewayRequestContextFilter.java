@@ -15,6 +15,11 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+/**
+ * GatewayRequestContextFilter component.
+ *
+ * @author WPS
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GatewayRequestContextFilter extends OncePerRequestFilter {

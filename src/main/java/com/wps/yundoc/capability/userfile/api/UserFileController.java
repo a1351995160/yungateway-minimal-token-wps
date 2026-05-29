@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.regex.Pattern;
 
+/**
+ * UserFileController component.
+ *
+ * @author WPS
+ */
 @RestController
 @RequestMapping("/api/v1/user/files")
 public class UserFileController {

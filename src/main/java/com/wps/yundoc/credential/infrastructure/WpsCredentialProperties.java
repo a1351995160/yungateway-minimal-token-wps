@@ -4,6 +4,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 
+/**
+ * WpsCredentialProperties component.
+ *
+ * @author WPS
+ */
 @ConfigurationProperties(prefix = "yundoc.wps-credential")
 public class WpsCredentialProperties {
 

@@ -75,7 +75,7 @@ class WpsAuthorizationClientTest {
         properties.setUserTokenPath("/oauth/user-token");
         properties.setAppId("wps-app");
         properties.setRedirectUri("https://gateway.test/api/v1/wps/oauth/callback");
-        properties.setOAuthScope("files.read");
+        properties.setOauthScope("files.read");
         properties.setConnectTimeout(Duration.ofSeconds(1));
         properties.setReadTimeout(Duration.ofSeconds(1));
         return properties;

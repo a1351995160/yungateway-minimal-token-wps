@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+/**
+ * AppTokenPayload component.
+ *
+ * @author WPS
+ */
 class AppTokenPayload {
 
     private final String appId;

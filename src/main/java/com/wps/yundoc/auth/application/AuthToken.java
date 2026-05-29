@@ -4,6 +4,11 @@ import com.wps.yundoc.auth.domain.BusinessSystemPrincipal;
 
 import java.util.List;
 
+/**
+ * AuthToken component.
+ *
+ * @author WPS
+ */
 public class AuthToken {
 
     private final String accessToken;

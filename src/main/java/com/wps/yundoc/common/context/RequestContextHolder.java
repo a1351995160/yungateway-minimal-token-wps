@@ -2,6 +2,11 @@ package com.wps.yundoc.common.context;
 
 import java.util.Optional;
 
+/**
+ * RequestContextHolder component.
+ *
+ * @author WPS
+ */
 public final class RequestContextHolder {
 
     private static final ThreadLocal<RequestContext> CONTEXT = new ThreadLocal<>();

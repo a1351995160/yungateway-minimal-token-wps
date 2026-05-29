@@ -2,6 +2,11 @@ package com.wps.yundoc.capability.apppreview.api;
 
 import com.wps.yundoc.capability.apppreview.application.AppPreviewResult;
 
+/**
+ * AppPreviewResponse component.
+ *
+ * @author WPS
+ */
 public class AppPreviewResponse {
 
     private final String previewUrl;

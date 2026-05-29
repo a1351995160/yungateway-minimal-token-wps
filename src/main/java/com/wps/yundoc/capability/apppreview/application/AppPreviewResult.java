@@ -2,6 +2,11 @@ package com.wps.yundoc.capability.apppreview.application;
 
 import java.time.OffsetDateTime;
 
+/**
+ * AppPreviewResult component.
+ *
+ * @author WPS
+ */
 public class AppPreviewResult {
 
     private final String previewUrl;

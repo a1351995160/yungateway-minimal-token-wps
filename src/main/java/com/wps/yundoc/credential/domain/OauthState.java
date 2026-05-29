@@ -2,14 +2,19 @@ package com.wps.yundoc.credential.domain;
 
 import java.time.OffsetDateTime;
 
-public class OAuthState {
+/**
+ * OauthState component.
+ *
+ * @author WPS
+ */
+public class OauthState {
 
     private final String state;
     private final String userId;
     private final String businessSystemId;
     private final OffsetDateTime expiresAt;
 
-    public OAuthState(String state, String userId, String businessSystemId, OffsetDateTime expiresAt) {
+    public OauthState(String state, String userId, String businessSystemId, OffsetDateTime expiresAt) {
         this.state = state;
         this.userId = userId;
         this.businessSystemId = businessSystemId;

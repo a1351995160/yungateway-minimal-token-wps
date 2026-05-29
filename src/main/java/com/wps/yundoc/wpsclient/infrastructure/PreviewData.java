@@ -1,5 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+/**
+ * PreviewData component.
+ *
+ * @author WPS
+ */
 class PreviewData {
 
     private String previewUrl;

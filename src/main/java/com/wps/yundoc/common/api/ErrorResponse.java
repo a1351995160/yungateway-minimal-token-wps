@@ -4,6 +4,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.util.Map;
 
+/**
+ * ErrorResponse component.
+ *
+ * @author WPS
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse {
 
