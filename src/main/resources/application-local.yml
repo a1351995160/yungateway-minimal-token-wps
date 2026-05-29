@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${LOCAL_MYSQL_HOST:127.0.0.1}:${LOCAL_MYSQL_PORT:3306}/${LOCAL_MYSQL_DATABASE:yundoc_local}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: ${LOCAL_MYSQL_USERNAME:root}
+    password: ${LOCAL_MYSQL_PASSWORD:123456}
+
+yundoc:
+  client-secret:
+    pepper: ${YUNDOC_LOCAL_CLIENT_SECRET_PEPPER:local-client-secret-pepper}
+    algorithm: HMAC-SHA256
+  jwt:
+    issuer: yundoc-gateway-local
+    audience: yundoc-business-systems-local
+    secret: ${YUNDOC_LOCAL_BUSINESS_JWT_SECRET:local-business-jwt-secret-with-enough-length}
+    ttl: 30m
+  wps-client:
+    base-url: https://wps.test
+    redirect-uri: http://localhost:8080/api/v1/wps/oauth/callback
+    oauth-scope: files.read
+    app-id: local-wps-app-id
+    app-secret: ${WPS_LOCAL_APP_SECRET:local-wps-placeholder}

@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: wps-yundoc-capability-gateway
+
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+      group:
+        readiness:
+          include: readinessState,yundocConfiguration,db
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+yundoc:
+  readiness:
+    tdsql-required: true
+  wps-client:
+    preview-path: /api/preview-links
+    token-path: /oauth/token
+    file-list-path: /api/user/files
+    authorize-path: /oauth/authorize
+    user-token-path: /oauth/user-token
+  wps-credential:
+    max-user-token-count: 10000
+  wps-user-authorization:
+    max-state-count: 10000

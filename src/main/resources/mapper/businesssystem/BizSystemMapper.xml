@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wps.yundoc.businesssystem.infrastructure.BizSystemMapper">
+
+    <resultMap id="BizSystemResultMap" type="com.wps.yundoc.businesssystem.infrastructure.BizSystemPO">
+        <id property="businessSystemId" column="business_system_id"/>
+        <result property="businessSystemName" column="business_system_name"/>
+        <result property="clientId" column="client_id"/>
+        <result property="clientSecretDigest" column="client_secret_digest"/>
+        <result property="clientSecretSalt" column="client_secret_salt"/>
+        <result property="clientSecretAlg" column="client_secret_alg"/>
+        <result property="status" column="status"/>
+        <result property="tokenVersion" column="token_version"/>
+        <result property="permissionVersion" column="permission_version"/>
+        <result property="jwtTtlSeconds" column="jwt_ttl_seconds"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="BizSystemColumns">
+        business_system_id,
+        business_system_name,
+        client_id,
+        client_secret_digest,
+        client_secret_salt,
+        client_secret_alg,
+        status,
+        token_version,
+        permission_version,
+        jwt_ttl_seconds,
+        description,
+        created_at,
+        updated_at
+    </sql>
+
+    <select id="selectByBusinessSystemId" resultMap="BizSystemResultMap">
+        SELECT
+        <include refid="BizSystemColumns"/>
+        FROM biz_system
+        WHERE business_system_id = #{businessSystemId}
+    </select>
+
+    <select id="selectByClientId" resultMap="BizSystemResultMap">
+        SELECT
+        <include refid="BizSystemColumns"/>
+        FROM biz_system
+        WHERE client_id = #{clientId}
+    </select>
+</mapper>
