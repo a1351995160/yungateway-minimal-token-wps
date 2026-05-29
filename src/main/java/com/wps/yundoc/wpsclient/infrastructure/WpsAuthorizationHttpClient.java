@@ -1,7 +1,6 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
-import com.wps.yundoc.common.error.YundocErrorCode;
-import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.credential.domain.WpsUserToken;
 import com.wps.yundoc.wpsclient.application.WpsAuthorizationClient;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -9,7 +8,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -28,7 +26,7 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
     private final RestTemplate restTemplate;
 
     public WpsAuthorizationHttpClient(WpsClientProperties properties, RestTemplateBuilder builder) {
-        this(properties, builder, restTemplate(properties, builder));
+        this(properties, builder, WpsClientSupport.restTemplate(properties, builder));
     }
 
     public WpsAuthorizationHttpClient(
@@ -53,12 +51,10 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
 
     @Override
     public WpsUserToken exchangeCode(String code) {
-        try {
-            WpsAppTokenResponse response = exchange(code);
-            return toUserToken(response);
-        } catch (RestClientException ex) {
-            throw upstreamError(ex);
-        }
+        WpsAppTokenResponse response = WpsClientSupport.executeWithRetry(
+                properties,
+                () -> exchange(code));
+        return toUserToken(response);
     }
 
     private WpsAppTokenResponse exchange(String code) {
@@ -75,17 +71,17 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
     }
 
     private AppTokenData requireData(WpsAppTokenResponse response) {
-        if (!hasSuccessEnvelope(response)) {
-            throw upstreamError(null);
+        if (!WpsClientSupport.isSuccessEnvelope(response)) {
+            throw WpsClientSupport.upstreamError(null);
         }
         if (response.getData() == null) {
-            throw upstreamError(null);
+            throw WpsClientSupport.upstreamError(null);
         }
-        if (!hasText(response.getData().getAccessToken())) {
-            throw upstreamError(null);
+        if (!Texts.hasText(response.getData().getAccessToken())) {
+            throw WpsClientSupport.upstreamError(null);
         }
-        if (!hasText(response.getData().getExpireAt())) {
-            throw upstreamError(null);
+        if (!Texts.hasText(response.getData().getExpireAt())) {
+            throw WpsClientSupport.upstreamError(null);
         }
         return response.getData();
     }
@@ -109,39 +105,11 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
         return properties.getBaseUrl() + properties.getUserTokenPath();
     }
 
-    private boolean hasSuccessEnvelope(WpsEnvelope<?> response) {
-        if (response == null) {
-            return false;
-        }
-        if (response.getCode() == null) {
-            return false;
-        }
-        return response.getCode().intValue() == 0;
-    }
-
     private OffsetDateTime parseExpireAt(String expireAt) {
         try {
             return OffsetDateTime.parse(expireAt);
         } catch (DateTimeParseException ex) {
-            throw upstreamError(ex);
+            throw WpsClientSupport.upstreamError(ex);
         }
-    }
-
-    private boolean hasText(String value) {
-        if (value == null) {
-            return false;
-        }
-        return !value.trim().isEmpty();
-    }
-
-    private YundocException upstreamError(Throwable cause) {
-        return new YundocException(YundocErrorCode.WPS_UPSTREAM_ERROR, "WPS upstream error", cause);
-    }
-
-    private static RestTemplate restTemplate(WpsClientProperties properties, RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(properties.getConnectTimeout())
-                .setReadTimeout(properties.getReadTimeout())
-                .build();
     }
 }

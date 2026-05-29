@@ -2,6 +2,7 @@ package com.wps.yundoc.capability.userfile.application;
 
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.credential.application.WpsUserAuthorizationService;
 import com.wps.yundoc.credential.domain.WpsUserToken;
 import com.wps.yundoc.wpsclient.application.WpsFileClient;
@@ -47,14 +48,14 @@ public class UserFileService {
     }
 
     private void validateUserId(String userId) {
-        if (hasText(userId)) {
+        if (Texts.hasText(userId)) {
             return;
         }
         throw new YundocException(YundocErrorCode.USER_ID_REQUIRED);
     }
 
     private String parentFileId(String parentFileId) {
-        if (hasText(parentFileId)) {
+        if (Texts.hasText(parentFileId)) {
             return parentFileId;
         }
         return DEFAULT_PARENT_FILE_ID;
@@ -65,12 +66,5 @@ public class UserFileService {
             return DEFAULT_LIMIT;
         }
         return Math.min(requestedLimit, MAX_LIMIT);
-    }
-
-    private boolean hasText(String value) {
-        if (value == null) {
-            return false;
-        }
-        return !value.trim().isEmpty();
     }
 }

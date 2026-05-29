@@ -1,5 +1,6 @@
 package com.wps.yundoc.common.config;
 
+import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.wpsclient.infrastructure.WpsClientProperties;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
@@ -54,22 +55,15 @@ public class YundocConfigurationHealthIndicator implements HealthIndicator {
     }
 
     private boolean missingRealWpsConfiguration() {
-        return missing(wpsClientProperties.getBaseUrl())
-                || missing(wpsClientProperties.getPreviewPath())
-                || missing(wpsClientProperties.getTokenPath())
-                || missing(wpsClientProperties.getFileListPath())
-                || missing(wpsClientProperties.getAuthorizePath())
-                || missing(wpsClientProperties.getUserTokenPath())
-                || missing(wpsClientProperties.getRedirectUri())
-                || missing(wpsClientProperties.getOauthScope())
-                || missing(wpsClientProperties.getAppId())
-                || missing(wpsClientProperties.getAppSecret());
-    }
-
-    private boolean missing(String value) {
-        if (value == null) {
-            return true;
-        }
-        return value.trim().isEmpty();
+        return Texts.isBlank(wpsClientProperties.getBaseUrl())
+                || Texts.isBlank(wpsClientProperties.getPreviewPath())
+                || Texts.isBlank(wpsClientProperties.getTokenPath())
+                || Texts.isBlank(wpsClientProperties.getFileListPath())
+                || Texts.isBlank(wpsClientProperties.getAuthorizePath())
+                || Texts.isBlank(wpsClientProperties.getUserTokenPath())
+                || Texts.isBlank(wpsClientProperties.getRedirectUri())
+                || Texts.isBlank(wpsClientProperties.getOauthScope())
+                || Texts.isBlank(wpsClientProperties.getAppId())
+                || Texts.isBlank(wpsClientProperties.getAppSecret());
     }
 }

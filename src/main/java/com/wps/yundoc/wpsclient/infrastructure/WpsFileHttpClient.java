@@ -1,7 +1,6 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
-import com.wps.yundoc.common.error.YundocErrorCode;
-import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.wpsclient.application.WpsFileClient;
 import com.wps.yundoc.wpsclient.application.WpsFileItem;
 import com.wps.yundoc.wpsclient.application.WpsFileList;
@@ -10,7 +9,6 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -30,7 +28,7 @@ public class WpsFileHttpClient implements WpsFileClient {
     private final RestTemplate restTemplate;
 
     public WpsFileHttpClient(WpsClientProperties properties, RestTemplateBuilder builder) {
-        this(properties, builder, restTemplate(properties, builder));
+        this(properties, builder, WpsClientSupport.restTemplate(properties, builder));
     }
 
     public WpsFileHttpClient(
@@ -44,12 +42,10 @@ public class WpsFileHttpClient implements WpsFileClient {
 
     @Override
     public WpsFileList listFiles(WpsFileListRequest request) {
-        try {
-            WpsFileListResponse response = exchange(request);
-            return toFileList(response);
-        } catch (RestClientException ex) {
-            throw upstreamError(ex);
-        }
+        WpsFileListResponse response = WpsClientSupport.executeWithRetry(
+                properties,
+                () -> exchange(request));
+        return toFileList(response);
     }
 
     private WpsFileListResponse exchange(WpsFileListRequest request) {
@@ -66,11 +62,11 @@ public class WpsFileHttpClient implements WpsFileClient {
     }
 
     private FileListData requireData(WpsFileListResponse response) {
-        if (!hasSuccessEnvelope(response)) {
-            throw upstreamError(null);
+        if (!WpsClientSupport.isSuccessEnvelope(response)) {
+            throw WpsClientSupport.upstreamError(null);
         }
         if (response.getData() == null) {
-            throw upstreamError(null);
+            throw WpsClientSupport.upstreamError(null);
         }
         return response.getData();
     }
@@ -91,6 +87,9 @@ public class WpsFileHttpClient implements WpsFileClient {
     }
 
     private WpsFileItem toItem(FileListItemData item) {
+        if (item == null) {
+            throw WpsClientSupport.upstreamError(null);
+        }
         return new WpsFileItem(
                 item.getFileId(),
                 item.getName(),
@@ -114,40 +113,12 @@ public class WpsFileHttpClient implements WpsFileClient {
     }
 
     private void addCursor(UriComponentsBuilder builder, String cursor) {
-        if (hasText(cursor)) {
+        if (Texts.hasText(cursor)) {
             builder.queryParam("cursor", cursor);
         }
     }
 
     private String baseFileListUrl() {
         return properties.getBaseUrl() + properties.getFileListPath();
-    }
-
-    private boolean hasSuccessEnvelope(WpsEnvelope<?> response) {
-        if (response == null) {
-            return false;
-        }
-        if (response.getCode() == null) {
-            return false;
-        }
-        return response.getCode().intValue() == 0;
-    }
-
-    private boolean hasText(String value) {
-        if (value == null) {
-            return false;
-        }
-        return !value.trim().isEmpty();
-    }
-
-    private YundocException upstreamError(Throwable cause) {
-        return new YundocException(YundocErrorCode.WPS_UPSTREAM_ERROR, "WPS upstream error", cause);
-    }
-
-    private static RestTemplate restTemplate(WpsClientProperties properties, RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(properties.getConnectTimeout())
-                .setReadTimeout(properties.getReadTimeout())
-                .build();
     }
 }

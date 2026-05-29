@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class WpsAuthorizationClientTest {
@@ -66,6 +67,27 @@ class WpsAuthorizationClientTest {
         assertThatThrownBy(() -> client.exchangeCode("ok-code"))
                 .isInstanceOf(YundocException.class)
                 .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
+    }
+
+    @Test
+    void retriesTransientServerErrorWhenExchangingCode() {
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        WpsAuthorizationHttpClient client = new WpsAuthorizationHttpClient(
+                properties(),
+                new RestTemplateBuilder(),
+                restTemplate);
+        String body = "{\"code\":0,\"data\":{\"accessToken\":\"user-token\","
+                + "\"expireAt\":\"2026-05-26T18:00:00+08:00\"}}";
+        server.expect(once(), requestTo("https://wps.test/oauth/user-token"))
+                .andRespond(withServerError());
+        server.expect(once(), requestTo("https://wps.test/oauth/user-token"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        WpsUserToken token = client.exchangeCode("ok-code");
+
+        assertThat(token.getAccessToken()).isEqualTo("user-token");
+        server.verify();
     }
 
     private WpsClientProperties properties() {

@@ -2,6 +2,7 @@ package com.wps.yundoc.credential.application;
 
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.credential.domain.OauthState;
 import com.wps.yundoc.credential.domain.WpsOauthCallbackResult;
 import com.wps.yundoc.credential.domain.WpsUserToken;
@@ -58,7 +59,7 @@ public class WpsUserAuthorizationService {
     }
 
     private String requiredText(String value) {
-        if (hasText(value)) {
+        if (Texts.hasText(value)) {
             return value.trim();
         }
         throw new YundocException(YundocErrorCode.VALIDATION_FAILED);
@@ -77,12 +78,5 @@ public class WpsUserAuthorizationService {
         details.put("authorizeUrl", authorizationClient.authorizeUrl(state));
         details.put("expiresIn", Long.valueOf(properties.getStateTtl().getSeconds()));
         return new YundocException(YundocErrorCode.REAUTH_REQUIRED, details);
-    }
-
-    private boolean hasText(String value) {
-        if (value == null) {
-            return false;
-        }
-        return !value.trim().isEmpty();
     }
 }

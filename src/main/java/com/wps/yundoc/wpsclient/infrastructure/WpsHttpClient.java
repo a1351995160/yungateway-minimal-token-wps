@@ -1,7 +1,6 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
-import com.wps.yundoc.common.error.YundocErrorCode;
-import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.wpsclient.application.WpsAppToken;
 import com.wps.yundoc.wpsclient.application.WpsAppTokenClient;
 import com.wps.yundoc.wpsclient.application.WpsPreviewClient;
@@ -12,9 +11,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.OffsetDateTime;
@@ -32,7 +28,7 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
     private final RestTemplate restTemplate;
 
     public WpsHttpClient(WpsClientProperties properties, RestTemplateBuilder builder) {
-        this(properties, builder, restTemplate(properties, builder));
+        this(properties, builder, WpsClientSupport.restTemplate(properties, builder));
     }
 
     public WpsHttpClient(
@@ -46,30 +42,18 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
     @Override
     public WpsPreviewLink createPreview(WpsPreviewRequest request) {
-        WpsPreviewResponse response = executeWithRetry(() -> executePreviewOnce(request));
+        WpsPreviewResponse response = WpsClientSupport.executeWithRetry(
+                properties,
+                () -> executePreviewOnce(request));
         return toPreviewLink(response);
     }
 
     @Override
     public WpsAppToken issueAppToken() {
-        WpsAppTokenResponse response = executeWithRetry(this::executeAppTokenOnce);
+        WpsAppTokenResponse response = WpsClientSupport.executeWithRetry(
+                properties,
+                this::executeAppTokenOnce);
         return toAppToken(response);
-    }
-
-    private <T> T executeWithRetry(WpsCall<T> call) {
-        int maxAttempts = maxAttempts();
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                return call.execute();
-            } catch (ResourceAccessException ex) {
-                handleRetry(attempt, maxAttempts, ex);
-            } catch (HttpStatusCodeException ex) {
-                handleHttpRetry(attempt, maxAttempts, ex);
-            } catch (RestClientException ex) {
-                throw upstreamError(ex);
-            }
-        }
-        throw upstreamError(null);
     }
 
     private WpsPreviewResponse executePreviewOnce(WpsPreviewRequest request) {
@@ -102,41 +86,31 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
     }
 
     private PreviewData requirePreviewData(WpsPreviewResponse response) {
-        if (!hasSuccessEnvelope(response)) {
-            throw upstreamError(null);
+        if (!WpsClientSupport.isSuccessEnvelope(response)) {
+            throw WpsClientSupport.upstreamError(null);
         }
         PreviewData data = response.getData();
         if (data == null) {
-            throw upstreamError(null);
+            throw WpsClientSupport.upstreamError(null);
         }
-        if (!hasText(data.getPreviewUrl())) {
-            throw upstreamError(null);
+        if (!Texts.hasText(data.getPreviewUrl())) {
+            throw WpsClientSupport.upstreamError(null);
         }
         return data;
     }
 
     private AppTokenData requireAppTokenData(WpsAppTokenResponse response) {
-        if (!hasSuccessEnvelope(response)) {
-            throw upstreamError(null);
+        if (!WpsClientSupport.isSuccessEnvelope(response)) {
+            throw WpsClientSupport.upstreamError(null);
         }
         AppTokenData data = response.getData();
         if (data == null) {
-            throw upstreamError(null);
+            throw WpsClientSupport.upstreamError(null);
         }
-        if (!hasText(data.getAccessToken())) {
-            throw upstreamError(null);
+        if (!Texts.hasText(data.getAccessToken())) {
+            throw WpsClientSupport.upstreamError(null);
         }
         return data;
-    }
-
-    private boolean hasSuccessEnvelope(WpsEnvelope<?> response) {
-        if (response == null) {
-            return false;
-        }
-        if (response.getCode() == null) {
-            return false;
-        }
-        return response.getCode().intValue() == 0;
     }
 
     private HttpEntity<PreviewPayload> previewEntity(WpsPreviewRequest request) {
@@ -154,38 +128,6 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
         return new HttpEntity<>(payload, headers);
     }
 
-    private void handleRetry(int attempt, int maxAttempts, ResourceAccessException ex) {
-        if (attempt < maxAttempts) {
-            return;
-        }
-        throw upstreamError(ex);
-    }
-
-    private void handleHttpRetry(int attempt, int maxAttempts, HttpStatusCodeException ex) {
-        if (canRetryHttp(attempt, maxAttempts, ex)) {
-            return;
-        }
-        throw upstreamError(ex);
-    }
-
-    private boolean canRetryHttp(int attempt, int maxAttempts, HttpStatusCodeException ex) {
-        if (attempt >= maxAttempts) {
-            return false;
-        }
-        return isRetryableStatus(ex);
-    }
-
-    private boolean isRetryableStatus(HttpStatusCodeException ex) {
-        if (ex.getStatusCode().is5xxServerError()) {
-            return true;
-        }
-        return ex.getRawStatusCode() == 429;
-    }
-
-    private int maxAttempts() {
-        return Math.max(0, properties.getMaxRetries()) + 1;
-    }
-
     private String previewUrl() {
         return properties.getBaseUrl() + properties.getPreviewPath();
     }
@@ -195,41 +137,14 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
     }
 
     private OffsetDateTime parseExpireAt(String expireAt) {
-        if (!hasText(expireAt)) {
-            throw upstreamError(null);
+        if (!Texts.hasText(expireAt)) {
+            throw WpsClientSupport.upstreamError(null);
         }
         try {
             return OffsetDateTime.parse(expireAt);
         } catch (DateTimeParseException ex) {
-            throw upstreamError(ex);
+            throw WpsClientSupport.upstreamError(ex);
         }
     }
 
-    private boolean hasText(String value) {
-        if (value == null) {
-            return false;
-        }
-        return !value.trim().isEmpty();
-    }
-
-    private YundocException upstreamError(Throwable cause) {
-        return new YundocException(YundocErrorCode.WPS_UPSTREAM_ERROR, "WPS upstream error", cause);
-    }
-
-    private static RestTemplate restTemplate(WpsClientProperties properties, RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(properties.getConnectTimeout())
-                .setReadTimeout(properties.getReadTimeout())
-                .build();
-    }
-
-    private interface WpsCall<T> {
-
-        /**
-         * Executes a single WPS request attempt.
-         *
-         * @return response from WPS
-         */
-        T execute();
-    }
 }

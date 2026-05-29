@@ -46,12 +46,44 @@ class WpsFileClientTest {
     void mapsWpsFailureToStableErrorCode() {
         RestTemplate restTemplate = new RestTemplate();
         MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
-        WpsFileHttpClient client = new WpsFileHttpClient(properties(), new RestTemplateBuilder(), restTemplate);
+        WpsFileHttpClient client = new WpsFileHttpClient(noRetryProperties(), new RestTemplateBuilder(), restTemplate);
         server.expect(once(), requestTo("https://wps.test/api/user/files?parentFileId=root&limit=20"))
                 .andRespond(withServerError());
         WpsFileListRequest listRequest = request();
 
         assertThatThrownBy(() -> client.listFiles(listRequest))
+                .isInstanceOf(YundocException.class)
+                .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
+    }
+
+    @Test
+    void retriesTransientServerErrorWhenListingFiles() {
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        WpsFileHttpClient client = new WpsFileHttpClient(properties(), new RestTemplateBuilder(), restTemplate);
+        String body = "{\"code\":0,\"data\":{\"items\":[],\"nextCursor\":\"next\"}}";
+        server.expect(once(), requestTo("https://wps.test/api/user/files?parentFileId=root&limit=20"))
+                .andRespond(withServerError());
+        server.expect(once(), requestTo("https://wps.test/api/user/files?parentFileId=root&limit=20"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        WpsFileList list = client.listFiles(request());
+
+        assertThat(list.getItems()).isEmpty();
+        assertThat(list.getNextCursor()).isEqualTo("next");
+        server.verify();
+    }
+
+    @Test
+    void mapsNullFileListItemToStableErrorCode() {
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        WpsFileHttpClient client = new WpsFileHttpClient(noRetryProperties(), new RestTemplateBuilder(), restTemplate);
+        String body = "{\"code\":0,\"data\":{\"items\":[null]}}";
+        server.expect(once(), requestTo("https://wps.test/api/user/files?parentFileId=root&limit=20"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.listFiles(request()))
                 .isInstanceOf(YundocException.class)
                 .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
     }
@@ -66,6 +98,12 @@ class WpsFileClientTest {
         properties.setFileListPath("/api/user/files");
         properties.setConnectTimeout(Duration.ofSeconds(1));
         properties.setReadTimeout(Duration.ofSeconds(1));
+        return properties;
+    }
+
+    private WpsClientProperties noRetryProperties() {
+        WpsClientProperties properties = properties();
+        properties.setMaxRetries(0);
         return properties;
     }
 }

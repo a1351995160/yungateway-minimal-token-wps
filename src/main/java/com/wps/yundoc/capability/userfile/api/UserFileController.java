@@ -8,12 +8,14 @@ import com.wps.yundoc.common.context.RequestContext;
 import com.wps.yundoc.common.context.RequestContextHolder;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -66,7 +68,7 @@ public class UserFileController {
     }
 
     private String queryUserId(List<String> queryUserIds) {
-        if (hasNoQueryUserId(queryUserIds)) {
+        if (queryUserIds == null || queryUserIds.isEmpty()) {
             return null;
         }
         String first = requiredUserId(queryUserIds.get(0));
@@ -79,7 +81,7 @@ public class UserFileController {
 
     private void validateSameUserId(String first, String current) {
         String currentUserId = requiredUserId(current);
-        if (sameText(first, currentUserId)) {
+        if (Objects.equals(first, currentUserId)) {
             return;
         }
         throw new YundocException(YundocErrorCode.VALIDATION_FAILED);
@@ -138,38 +140,17 @@ public class UserFileController {
                 .orElseThrow(() -> new YundocException(YundocErrorCode.TOKEN_INVALID));
     }
 
-    private boolean hasText(String value) {
-        if (value == null) {
-            return false;
-        }
-        return !value.trim().isEmpty();
-    }
-
-    private boolean hasNoQueryUserId(List<String> queryUserIds) {
-        if (queryUserIds == null) {
-            return true;
-        }
-        return queryUserIds.isEmpty();
-    }
-
     private String requiredUserId(String value) {
-        if (hasText(value)) {
+        if (Texts.hasText(value)) {
             return value.trim();
         }
         throw new YundocException(YundocErrorCode.VALIDATION_FAILED);
     }
 
     private String normalized(String value) {
-        if (!hasText(value)) {
+        if (!Texts.hasText(value)) {
             return null;
         }
         return value.trim();
-    }
-
-    private boolean sameText(String first, String second) {
-        if (first == null) {
-            return second == null;
-        }
-        return first.equals(second);
     }
 }
