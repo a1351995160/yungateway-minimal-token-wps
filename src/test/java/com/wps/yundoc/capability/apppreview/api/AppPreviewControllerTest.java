@@ -18,6 +18,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -82,6 +87,15 @@ class AppPreviewControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    @Test
+    void rejectsTrailingSlashPreviewWithoutAuthorization() throws IOException {
+        int statusCode = postWithoutAuthorization(
+                url("/api/v1/app/previews/"),
+                previewJson("wps-file-trailing"));
+
+        assertThat(statusCode).isEqualTo(HttpStatus.UNAUTHORIZED.value());
+    }
+
     private String accessToken(BusinessSystemCredentials credentials) {
         String body = "{\"clientId\":\"" + credentials.getClientId()
                 + "\",\"clientSecret\":\"" + credentials.getClientSecret() + "\"}";
@@ -124,5 +138,16 @@ class AppPreviewControllerTest {
 
     private String url(String path) {
         return "http://localhost:" + port + path;
+    }
+
+    private int postWithoutAuthorization(String targetUrl, String body) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) new URL(targetUrl).openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        connection.setDoOutput(true);
+        try (OutputStream outputStream = connection.getOutputStream()) {
+            outputStream.write(body.getBytes(StandardCharsets.UTF_8));
+        }
+        return connection.getResponseCode();
     }
 }

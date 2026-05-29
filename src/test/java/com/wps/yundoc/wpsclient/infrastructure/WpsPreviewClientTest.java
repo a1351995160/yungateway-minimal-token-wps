@@ -96,6 +96,26 @@ class WpsPreviewClientTest {
         assertThat(client.issueAppToken().getAccessToken()).isEqualTo("app-token");
     }
 
+    @Test
+    void rejectsInsecureWpsBaseUrlWhenBuildingClient() {
+        WpsClientProperties properties = properties();
+        properties.setBaseUrl("http://wps.test");
+
+        assertThatThrownBy(() -> new WpsHttpClient(properties, new RestTemplateBuilder()))
+                .isInstanceOf(YundocException.class)
+                .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
+    }
+
+    @Test
+    void rejectsWpsBaseUrlWithUserInfoWhenBuildingClient() {
+        WpsClientProperties properties = properties();
+        properties.setBaseUrl("https://user@wps.test");
+
+        assertThatThrownBy(() -> new WpsHttpClient(properties, new RestTemplateBuilder()))
+                .isInstanceOf(YundocException.class)
+                .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
+    }
+
     private WpsPreviewRequest request() {
         return new WpsPreviewRequest("wps-file-001", 3600, "app-token");
     }

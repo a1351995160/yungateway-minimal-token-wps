@@ -39,4 +39,13 @@ class HealthCheckTest {
         JsonNode body = objectMapper.readTree(response.getBody());
         assertThat(body.path("components").has("yundocConfiguration")).isTrue();
     }
+
+    @Test
+    void metricsEndpointIsNotExposedByDefault() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+                "http://localhost:" + port + "/actuator/metrics",
+                String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
 }

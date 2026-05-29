@@ -11,6 +11,8 @@ import javax.servlet.http.HttpServletRequest;
  */
 class CapabilityRouteRule {
 
+    private static final String PATH_SEPARATOR = "/";
+
     private final HttpMethod method;
     private final String path;
     private final String suffix;
@@ -42,13 +44,14 @@ class CapabilityRouteRule {
     }
 
     private boolean matchesPath(String requestPath) {
+        String normalizedPath = normalizeTrailingSlash(requestPath);
         if (matchType == RouteMatchType.EXACT) {
-            return path.equals(requestPath);
+            return path.equals(normalizedPath);
         }
         if (matchType == RouteMatchType.PREFIX) {
-            return requestPath.startsWith(path);
+            return normalizedPath.startsWith(path);
         }
-        return matchesSuffixRoute(requestPath);
+        return matchesSuffixRoute(normalizedPath);
     }
 
     private boolean matchesSuffixRoute(String requestPath) {
@@ -80,5 +83,12 @@ class CapabilityRouteRule {
             return false;
         }
         return !value.isEmpty();
+    }
+
+    private String normalizeTrailingSlash(String value) {
+        if (value == null || value.length() <= 1 || !value.endsWith(PATH_SEPARATOR)) {
+            return value;
+        }
+        return value.substring(0, value.length() - 1);
     }
 }
