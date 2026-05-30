@@ -100,8 +100,9 @@ class WpsPreviewClientTest {
     void rejectsInsecureWpsBaseUrlWhenBuildingClient() {
         WpsClientProperties properties = properties();
         properties.setBaseUrl("http://wps.test");
+        RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
 
-        assertThatThrownBy(() -> new WpsHttpClient(properties, new RestTemplateBuilder()))
+        assertThatThrownBy(() -> new WpsHttpClient(properties, restTemplateBuilder))
                 .isInstanceOf(YundocException.class)
                 .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
     }
@@ -110,8 +111,9 @@ class WpsPreviewClientTest {
     void rejectsWpsBaseUrlWithUserInfoWhenBuildingClient() {
         WpsClientProperties properties = properties();
         properties.setBaseUrl("https://user@wps.test");
+        RestTemplateBuilder restTemplateBuilder = new RestTemplateBuilder();
 
-        assertThatThrownBy(() -> new WpsHttpClient(properties, new RestTemplateBuilder()))
+        assertThatThrownBy(() -> new WpsHttpClient(properties, restTemplateBuilder))
                 .isInstanceOf(YundocException.class)
                 .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
     }
