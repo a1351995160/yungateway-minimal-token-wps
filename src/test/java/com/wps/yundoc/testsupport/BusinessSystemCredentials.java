@@ -1,23 +1,21 @@
 package com.wps.yundoc.testsupport;
 
-import java.security.PrivateKey;
-
 public class BusinessSystemCredentials {
 
     private final String businessSystemId;
     private final String clientId;
     private final String clientSecret;
-    private final PrivateKey userAssertionPrivateKey;
+    private final String userAssertionSigningKey;
 
     public BusinessSystemCredentials(
             String businessSystemId,
             String clientId,
             String clientSecret,
-            PrivateKey userAssertionPrivateKey) {
+            String userAssertionSigningKey) {
         this.businessSystemId = businessSystemId;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-        this.userAssertionPrivateKey = userAssertionPrivateKey;
+        this.userAssertionSigningKey = userAssertionSigningKey;
     }
 
     public String getBusinessSystemId() {
@@ -32,7 +30,7 @@ public class BusinessSystemCredentials {
         return clientSecret;
     }
 
-    public PrivateKey getUserAssertionPrivateKey() {
-        return userAssertionPrivateKey;
+    public String getUserAssertionSigningKey() {
+        return userAssertionSigningKey;
     }
 }

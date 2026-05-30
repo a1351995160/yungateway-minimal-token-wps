@@ -3,16 +3,17 @@ package com.wps.yundoc.testsupport;
 import com.wps.yundoc.auth.application.UserAssertionVerifier;
 import org.springframework.http.HttpHeaders;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.security.Signature;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.UUID;
 
 public final class UserAssertionSigner {
 
-    private static final String SIGNATURE_ALGORITHM = "SHA256withRSA";
+    private static final String SIGNATURE_ALGORITHM = "HmacSHA256";
 
     private UserAssertionSigner() {
     }
@@ -48,10 +49,11 @@ public final class UserAssertionSigner {
 
     private static String signature(BusinessSystemCredentials credentials, String signingInput) {
         try {
-            Signature signer = Signature.getInstance(SIGNATURE_ALGORITHM);
-            signer.initSign(credentials.getUserAssertionPrivateKey());
-            signer.update(signingInput.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(signer.sign());
+            Mac mac = Mac.getInstance(SIGNATURE_ALGORITHM);
+            byte[] key = credentials.getUserAssertionSigningKey().getBytes(StandardCharsets.UTF_8);
+            mac.init(new SecretKeySpec(key, SIGNATURE_ALGORITHM));
+            return Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(mac.doFinal(signingInput.getBytes(StandardCharsets.UTF_8)));
         } catch (GeneralSecurityException ex) {
             throw new AssertionError("user assertion signing failed", ex);
         }

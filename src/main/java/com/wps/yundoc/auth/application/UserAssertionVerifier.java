@@ -1,7 +1,5 @@
 package com.wps.yundoc.auth.application;
 
-import com.wps.yundoc.businesssystem.infrastructure.BizSystemMapper;
-import com.wps.yundoc.businesssystem.infrastructure.BizSystemPO;
 import com.wps.yundoc.common.context.RequestContext;
 import com.wps.yundoc.common.context.RequestContextHolder;
 import com.wps.yundoc.common.error.YundocErrorCode;
@@ -9,13 +7,12 @@ import com.wps.yundoc.common.error.YundocException;
 import com.wps.yundoc.common.util.Texts;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Objects;
@@ -34,20 +31,19 @@ public class UserAssertionVerifier {
     public static final String NONCE_HEADER = "X-Yundoc-User-Nonce";
     public static final String SIGNATURE_HEADER = "X-Yundoc-User-Signature";
 
-    private static final String SIGNATURE_ALGORITHM = "SHA256withRSA";
-    private static final String KEY_ALGORITHM = "RSA";
+    private static final String SIGNATURE_ALGORITHM = "HmacSHA256";
     private static final int MAX_NONCE_LENGTH = 128;
     private static final Pattern NONCE_PATTERN = Pattern.compile("^[A-Za-z0-9._:@-]+$");
 
-    private final BizSystemMapper bizSystemMapper;
+    private final ClientSecretDigestProperties digestProperties;
     private final UserAssertionProperties properties;
     private final UserAssertionNonceCache nonceCache;
 
     public UserAssertionVerifier(
-            BizSystemMapper bizSystemMapper,
+            ClientSecretDigestProperties digestProperties,
             UserAssertionProperties properties,
             UserAssertionNonceCache nonceCache) {
-        this.bizSystemMapper = bizSystemMapper;
+        this.digestProperties = digestProperties;
         this.properties = properties;
         this.nonceCache = nonceCache;
     }
@@ -65,7 +61,7 @@ public class UserAssertionVerifier {
         String nonce = validNonce(requiredHeader(request, NONCE_HEADER));
         String signature = requiredHeader(request, SIGNATURE_HEADER);
         long timestampEpochSecond = validTimestamp(timestamp);
-        verifySignature(publicKey(context.getBusinessSystemId()), signature, signingInput(
+        verifySignature(signature, signingInput(
                 request,
                 assertedUserId,
                 timestamp,
@@ -110,36 +106,23 @@ public class UserAssertionVerifier {
         }
     }
 
-    private PublicKey publicKey(String businessSystemId) {
-        BizSystemPO bizSystem = bizSystemMapper.selectByBusinessSystemId(businessSystemId);
-        if (bizSystem == null || !Texts.hasText(bizSystem.getUserAssertionPublicKey())) {
-            throw invalid();
-        }
+    private void verifySignature(String encodedSignature, String signingInput) {
         try {
-            byte[] der = Base64.getMimeDecoder().decode(normalizePem(bizSystem.getUserAssertionPublicKey()));
-            return KeyFactory.getInstance(KEY_ALGORITHM).generatePublic(new X509EncodedKeySpec(der));
-        } catch (GeneralSecurityException | IllegalArgumentException ex) {
-            throw invalid();
-        }
-    }
-
-    private String normalizePem(String pem) {
-        return pem.replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replaceAll("\\s", "");
-    }
-
-    private void verifySignature(PublicKey publicKey, String encodedSignature, String signingInput) {
-        try {
-            Signature verifier = Signature.getInstance(SIGNATURE_ALGORITHM);
-            verifier.initVerify(publicKey);
-            verifier.update(signingInput.getBytes(StandardCharsets.UTF_8));
-            if (!verifier.verify(Base64.getUrlDecoder().decode(encodedSignature))) {
+            byte[] actual = Base64.getUrlDecoder().decode(encodedSignature);
+            byte[] expected = hmac(signingInput);
+            if (!MessageDigest.isEqual(actual, expected)) {
                 throw invalid();
             }
         } catch (GeneralSecurityException | IllegalArgumentException ex) {
             throw invalid();
         }
+    }
+
+    private byte[] hmac(String signingInput) throws GeneralSecurityException {
+        Mac mac = Mac.getInstance(SIGNATURE_ALGORITHM);
+        byte[] key = digestProperties.getPepper().getBytes(StandardCharsets.UTF_8);
+        mac.init(new SecretKeySpec(key, SIGNATURE_ALGORITHM));
+        return mac.doFinal(signingInput.getBytes(StandardCharsets.UTF_8));
     }
 
     private String signingInput(
