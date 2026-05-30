@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="Yundoc Java Rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>
+        Yundoc Java baseline: Alibaba P3C plus automatable rules from docs/coding-standards.md.
+    </description>
+
+    <rule ref="rulesets/java/ali-comment.xml"/>
+    <rule ref="rulesets/java/ali-concurrent.xml"/>
+    <rule ref="rulesets/java/ali-constant.xml"/>
+    <rule ref="rulesets/java/ali-exception.xml"/>
+    <rule ref="rulesets/java/ali-flowcontrol.xml"/>
+    <rule ref="rulesets/java/ali-naming.xml"/>
+    <rule ref="rulesets/java/ali-oop.xml"/>
+    <rule ref="rulesets/java/ali-orm.xml"/>
+    <rule ref="rulesets/java/ali-other.xml"/>
+    <rule ref="rulesets/java/ali-set.xml"/>
+
+    <rule ref="category/java/design.xml/ExcessiveParameterList"
+          message="Method parameter count must not exceed 5.">
+        <priority>3</priority>
+        <properties>
+            <property name="minimum" value="6"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/ExcessiveMethodLength"
+          message="Method length must not exceed 20 lines.">
+        <priority>3</priority>
+        <properties>
+            <property name="minimum" value="21"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/CyclomaticComplexity"
+          message="Method cyclomatic complexity must not exceed 4.">
+        <priority>3</priority>
+        <properties>
+            <property name="methodReportLevel" value="5"/>
+            <property name="classReportLevel" value="999"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/errorprone.xml/AvoidDuplicateLiterals"
+          message="Duplicate string literals appearing 3 or more times should be extracted as constants.">
+        <priority>3</priority>
+        <properties>
+            <property name="maxDuplicateLiterals" value="3"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/bestpractices.xml/UnusedImports"/>
+    <rule ref="category/java/bestpractices.xml/UnusedFormalParameter"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+    <rule ref="category/java/codestyle.xml/LocalVariableNamingConventions"/>
+    <rule ref="category/java/design.xml/AvoidThrowingRawExceptionTypes"/>
+
+    <rule name="TooManySwitchCases"
+          language="java"
+          message="Switch statements must not have more than 5 case branches."
+          class="net.sourceforge.pmd.lang.rule.XPathRule">
+        <priority>3</priority>
+        <properties>
+            <property name="version" value="2.0"/>
+            <property name="xpath">
+                <value>
+                    <![CDATA[
+//SwitchStatement[count(SwitchLabel[not(@Default = 'true')]) > 5]
+                    ]]>
+                </value>
+            </property>
+        </properties>
+    </rule>
+</ruleset>
