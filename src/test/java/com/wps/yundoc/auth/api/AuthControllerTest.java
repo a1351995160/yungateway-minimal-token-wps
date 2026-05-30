@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
@@ -23,11 +24,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+        "yundoc.auth-token-rate-limit.max-failures-per-client=2",
+        "yundoc.auth-token-rate-limit.max-failures-per-remote-address=100"
+})
 class AuthControllerTest {
 
     @LocalServerPort
@@ -80,6 +86,37 @@ class AuthControllerTest {
     void rejectsWrongClientSecret() throws Exception {
         BusinessSystemCredentials credentials = businessSystemFixture.enabled("biz-token-wrong-secret");
 
+        mockMvc.perform(post("/api/v1/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(tokenJson(credentials.getClientId(), "wrong-secret")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rateLimitsRepeatedWrongClientSecretAttempts() throws Exception {
+        BusinessSystemCredentials credentials = businessSystemFixture.enabled("biz-token-rate-limit");
+
+        rejectWrongSecret(credentials);
+        rejectWrongSecret(credentials);
+
+        mockMvc.perform(post("/api/v1/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(tokenJson(credentials.getClientId(), "wrong-secret")))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.error.code").value("RATE_LIMIT_EXCEEDED"));
+    }
+
+    @Test
+    void allowsTokenAfterSingleWrongClientSecretAttempt() throws Exception {
+        BusinessSystemCredentials credentials = businessSystemFixture.enabled("biz-token-rate-limit-success");
+
+        rejectWrongSecret(credentials);
+
+        ResponseEntity<String> response = token(credentials.getClientId(), credentials.getClientSecret());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    private void rejectWrongSecret(BusinessSystemCredentials credentials) throws Exception {
         mockMvc.perform(post("/api/v1/auth/token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(tokenJson(credentials.getClientId(), "wrong-secret")))

@@ -35,6 +35,10 @@ public enum YundocErrorCode {
      */
     VALIDATION_FAILED(400, "Request validation failed"),
     /**
+     * Too many authentication attempts were made.
+     */
+    RATE_LIMIT_EXCEEDED(429, "Too many authentication attempts"),
+    /**
      * WPS upstream request failed.
      */
     WPS_UPSTREAM_ERROR(502, "WPS upstream error"),

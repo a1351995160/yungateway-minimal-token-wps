@@ -20,6 +20,12 @@ management:
         include: health
 
 yundoc:
+  auth-token-rate-limit:
+    enabled: true
+    max-failures-per-client: 5
+    max-failures-per-remote-address: 20
+    max-tracked-keys: 10000
+    window: 1m
   readiness:
     tdsql-required: true
   wps-client:
