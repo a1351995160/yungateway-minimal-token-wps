@@ -125,13 +125,14 @@ public class UserFileController {
     }
 
     private int validatedLimit(int limit) {
-        if (limit <= 0) {
-            throw new YundocException(YundocErrorCode.VALIDATION_FAILED);
-        }
-        if (limit <= MAX_LIMIT) {
+        if (limitInRange(limit)) {
             return limit;
         }
         throw new YundocException(YundocErrorCode.VALIDATION_FAILED);
+    }
+
+    private boolean limitInRange(int limit) {
+        return limit > 0 && limit <= MAX_LIMIT;
     }
 
     private String businessSystemId() {

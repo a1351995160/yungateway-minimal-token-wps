@@ -62,13 +62,7 @@ public class WpsFileHttpClient implements WpsFileClient {
     }
 
     private FileListData requireData(WpsFileListResponse response) {
-        if (!WpsClientSupport.isSuccessEnvelope(response)) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        if (response.getData() == null) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        return response.getData();
+        return WpsClientSupport.requireSuccessData(response);
     }
 
     private List<WpsFileItem> toItems(List<FileListItemData> items) {

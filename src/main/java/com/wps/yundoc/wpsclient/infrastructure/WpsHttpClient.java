@@ -29,7 +29,6 @@ import java.util.Objects;
  */
 public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
-    private static final String HTTPS_SCHEME = "https";
     private static final long PREVIEW_EXPIRY_SKEW_SECONDS = 30L;
 
     private final WpsClientProperties properties;
@@ -96,30 +95,14 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
     }
 
     private PreviewData requirePreviewData(WpsPreviewResponse response) {
-        if (!WpsClientSupport.isSuccessEnvelope(response)) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        PreviewData data = response.getData();
-        if (data == null) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        if (!Texts.hasText(data.getPreviewUrl())) {
-            throw WpsClientSupport.upstreamError(null);
-        }
+        PreviewData data = WpsClientSupport.requireSuccessData(response);
+        WpsClientSupport.requireText(data.getPreviewUrl());
         return data;
     }
 
     private AppTokenData requireAppTokenData(WpsAppTokenResponse response) {
-        if (!WpsClientSupport.isSuccessEnvelope(response)) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        AppTokenData data = response.getData();
-        if (data == null) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        if (!Texts.hasText(data.getAccessToken())) {
-            throw WpsClientSupport.upstreamError(null);
-        }
+        AppTokenData data = WpsClientSupport.requireSuccessData(response);
+        WpsClientSupport.requireText(data.getAccessToken());
         return data;
     }
 
@@ -147,9 +130,7 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
     }
 
     private OffsetDateTime parseExpireAt(String expireAt) {
-        if (!Texts.hasText(expireAt)) {
-            throw WpsClientSupport.upstreamError(null);
-        }
+        WpsClientSupport.requireText(expireAt);
         try {
             return OffsetDateTime.parse(expireAt);
         } catch (DateTimeParseException ex) {
@@ -159,12 +140,17 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
     private void validatePreviewUrl(String previewUrl) {
         URI uri = uri(previewUrl);
-        if (!HTTPS_SCHEME.equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
+        if (!isValidPreviewUri(uri)) {
             throw WpsClientSupport.upstreamError(null);
         }
-        if (uri.getUserInfo() != null || !allowedPreviewHosts().contains(normalizeHost(uri.getHost()))) {
-            throw WpsClientSupport.upstreamError(null);
-        }
+    }
+
+    private boolean isValidPreviewUri(URI uri) {
+        return WpsClientSupport.isSecureHttpsUri(uri) && isAllowedPreviewUri(uri);
+    }
+
+    private boolean isAllowedPreviewUri(URI uri) {
+        return uri.getUserInfo() == null && allowedPreviewHosts().contains(normalizeHost(uri.getHost()));
     }
 
     private List<String> allowedPreviewHosts() {

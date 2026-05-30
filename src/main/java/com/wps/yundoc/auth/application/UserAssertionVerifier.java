@@ -49,14 +49,10 @@ public class UserAssertionVerifier {
     }
 
     public void verify(HttpServletRequest request, String userId) {
-        if (!Texts.hasText(userId)) {
-            throw new YundocException(YundocErrorCode.USER_ID_REQUIRED);
-        }
+        requireUserId(userId);
         RequestContext context = requestContext();
         String assertedUserId = requiredHeader(request, USER_ID_HEADER);
-        if (!Objects.equals(userId, assertedUserId)) {
-            throw invalid();
-        }
+        verifyUserId(userId, assertedUserId);
         String timestamp = requiredHeader(request, TIMESTAMP_HEADER);
         String nonce = validNonce(requiredHeader(request, NONCE_HEADER));
         String signature = requiredHeader(request, SIGNATURE_HEADER);
@@ -68,6 +64,18 @@ public class UserAssertionVerifier {
                 timestamp,
                 nonce));
         markNonce(context.getBusinessSystemId(), nonce, timestampEpochSecond);
+    }
+
+    private void requireUserId(String userId) {
+        if (!Texts.hasText(userId)) {
+            throw new YundocException(YundocErrorCode.USER_ID_REQUIRED);
+        }
+    }
+
+    private void verifyUserId(String userId, String assertedUserId) {
+        if (!Objects.equals(userId, assertedUserId)) {
+            throw invalid();
+        }
     }
 
     private RequestContext requestContext() {
@@ -84,37 +92,58 @@ public class UserAssertionVerifier {
     }
 
     private String validNonce(String nonce) {
+        requireValidNonceLength(nonce);
+        requireValidNonceFormat(nonce);
+        return nonce;
+    }
+
+    private void requireValidNonceLength(String nonce) {
         if (nonce.length() > MAX_NONCE_LENGTH) {
             throw invalid();
         }
+    }
+
+    private void requireValidNonceFormat(String nonce) {
         if (!NONCE_PATTERN.matcher(nonce).matches()) {
             throw invalid();
         }
-        return nonce;
     }
 
     private long validTimestamp(String timestamp) {
         try {
-            long value = Long.parseLong(timestamp);
-            long now = Instant.now().getEpochSecond();
-            long skewSeconds = Math.max(1L, properties.getMaxClockSkew().getSeconds());
-            if (Math.abs(now - value) > skewSeconds) {
-                throw invalid();
-            }
-            return value;
+            return validTimestampValue(Long.parseLong(timestamp));
         } catch (NumberFormatException ex) {
             throw invalid();
         }
     }
 
+    private long validTimestampValue(long value) {
+        if (timestampInWindow(value)) {
+            return value;
+        }
+        throw invalid();
+    }
+
+    private boolean timestampInWindow(long value) {
+        long now = Instant.now().getEpochSecond();
+        long skewSeconds = Math.max(1L, properties.getMaxClockSkew().getSeconds());
+        return Math.abs(now - value) <= skewSeconds;
+    }
+
     private void verifySignature(String encodedSignature, String signingInput) {
         try {
-            byte[] actual = Base64.getUrlDecoder().decode(encodedSignature);
-            byte[] expected = hmac(signingInput);
-            if (!MessageDigest.isEqual(actual, expected)) {
-                throw invalid();
-            }
+            verifySignatureBytes(decodedSignature(encodedSignature), hmac(signingInput));
         } catch (GeneralSecurityException | IllegalArgumentException ex) {
+            throw invalid();
+        }
+    }
+
+    private byte[] decodedSignature(String encodedSignature) {
+        return Base64.getUrlDecoder().decode(encodedSignature);
+    }
+
+    private void verifySignatureBytes(byte[] actual, byte[] expected) {
+        if (!MessageDigest.isEqual(actual, expected)) {
             throw invalid();
         }
     }

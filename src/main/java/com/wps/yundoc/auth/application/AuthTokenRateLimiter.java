@@ -72,17 +72,39 @@ public class AuthTokenRateLimiter {
         if (maxFailures <= 0) {
             return;
         }
-        AttemptBucket bucket = failures.get(key);
-        if (bucket == null) {
+        AttemptBucket bucket = activeBucket(failures, key, now);
+        if (bucketAllowed(bucket, maxFailures)) {
             return;
         }
+        throw new YundocException(YundocErrorCode.RATE_LIMIT_EXCEEDED);
+    }
+
+    private AttemptBucket activeBucket(ConcurrentMap<String, AttemptBucket> failures, String key, long now) {
+        AttemptBucket bucket = failures.get(key);
+        if (bucketNotFound(bucket)) {
+            return null;
+        }
+        return removeExpiredBucket(failures, key, bucket, now);
+    }
+
+    private boolean bucketNotFound(AttemptBucket bucket) {
+        return bucket == null;
+    }
+
+    private AttemptBucket removeExpiredBucket(
+            ConcurrentMap<String, AttemptBucket> failures,
+            String key,
+            AttemptBucket bucket,
+            long now) {
         if (bucket.isExpired(now, windowMillis())) {
             failures.remove(key, bucket);
-            return;
+            return null;
         }
-        if (bucket.getFailures() >= maxFailures) {
-            throw new YundocException(YundocErrorCode.RATE_LIMIT_EXCEEDED);
-        }
+        return bucket;
+    }
+
+    private boolean bucketAllowed(AttemptBucket bucket, int maxFailures) {
+        return bucket == null || bucket.getFailures() < maxFailures;
     }
 
     private void recordFailure(

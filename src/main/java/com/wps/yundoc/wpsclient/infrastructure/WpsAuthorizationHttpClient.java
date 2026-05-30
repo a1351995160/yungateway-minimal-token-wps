@@ -1,6 +1,5 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
-import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.credential.domain.WpsUserToken;
 import com.wps.yundoc.wpsclient.application.WpsAuthorizationClient;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -71,19 +70,10 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
     }
 
     private AppTokenData requireData(WpsAppTokenResponse response) {
-        if (!WpsClientSupport.isSuccessEnvelope(response)) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        if (response.getData() == null) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        if (!Texts.hasText(response.getData().getAccessToken())) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        if (!Texts.hasText(response.getData().getExpireAt())) {
-            throw WpsClientSupport.upstreamError(null);
-        }
-        return response.getData();
+        AppTokenData data = WpsClientSupport.requireSuccessData(response);
+        WpsClientSupport.requireText(data.getAccessToken());
+        WpsClientSupport.requireText(data.getExpireAt());
+        return data;
     }
 
     private HttpEntity<OauthCodePayload> entity(String code) {

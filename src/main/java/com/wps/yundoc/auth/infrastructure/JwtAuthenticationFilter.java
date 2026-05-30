@@ -89,12 +89,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String bearerToken(HttpServletRequest request) {
         String authorization = request.getHeader(AUTHORIZATION_HEADER);
-        if (authorization == null) {
-            throw new YundocException(YundocErrorCode.AUTH_REQUIRED);
-        }
-        if (!authorization.startsWith(BEARER_PREFIX)) {
+        if (!isBearerAuthorization(authorization)) {
             throw new YundocException(YundocErrorCode.AUTH_REQUIRED);
         }
         return authorization.substring(BEARER_PREFIX.length());
+    }
+
+    private boolean isBearerAuthorization(String authorization) {
+        return authorization != null && authorization.startsWith(BEARER_PREFIX);
     }
 }
