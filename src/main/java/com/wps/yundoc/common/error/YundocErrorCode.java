@@ -31,6 +31,10 @@ public enum YundocErrorCode {
      */
     REAUTH_REQUIRED(401, "WPS user authorization is required"),
     /**
+     * Signed user assertion validation failed.
+     */
+    USER_ASSERTION_INVALID(401, "User assertion is invalid"),
+    /**
      * Request validation failed.
      */
     VALIDATION_FAILED(400, "Request validation failed"),

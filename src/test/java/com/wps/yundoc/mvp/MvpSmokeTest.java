@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wps.yundoc.testsupport.BusinessSystemCredentials;
 import com.wps.yundoc.testsupport.BusinessSystemFixture;
+import com.wps.yundoc.testsupport.UserAssertionSigner;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,10 +49,10 @@ class MvpSmokeTest {
         String accessToken = accessToken(credentials);
 
         JsonNode preview = postAppPreview(accessToken);
-        JsonNode reauth = getUserFiles(accessToken, HttpStatus.UNAUTHORIZED);
+        JsonNode reauth = getUserFiles(credentials, accessToken, HttpStatus.UNAUTHORIZED);
         String state = stateFromAuthorizeUrl(reauth);
         callback(state);
-        JsonNode files = getUserFiles(accessToken, HttpStatus.OK);
+        JsonNode files = getUserFiles(credentials, accessToken, HttpStatus.OK);
 
         assertThat(preview.path("data").path("previewUrl").asText()).startsWith("https://preview.test/files/");
         assertThat(preview.path("data").path("expireAt").asText()).isNotBlank();
@@ -80,11 +81,15 @@ class MvpSmokeTest {
         return body(response);
     }
 
-    private JsonNode getUserFiles(String accessToken, HttpStatus expectedStatus) throws IOException {
+    private JsonNode getUserFiles(
+            BusinessSystemCredentials credentials,
+            String accessToken,
+            HttpStatus expectedStatus) throws IOException {
+        String queryString = "userId=smoke-user";
         ResponseEntity<String> response = restTemplate.exchange(
-                url("/api/v1/user/files?userId=smoke-user"),
+                url("/api/v1/user/files?" + queryString),
                 HttpMethod.GET,
-                bearer(accessToken, null),
+                bearer(credentials, accessToken, "GET", "/api/v1/user/files", queryString, "smoke-user"),
                 String.class);
         assertThat(response.getStatusCode()).isEqualTo(expectedStatus);
         return body(response);
@@ -111,6 +116,19 @@ class MvpSmokeTest {
         HttpHeaders headers = jsonHeaders();
         headers.setBearerAuth(accessToken);
         return new HttpEntity<>(body, headers);
+    }
+
+    private HttpEntity<String> bearer(
+            BusinessSystemCredentials credentials,
+            String accessToken,
+            String method,
+            String path,
+            String queryString,
+            String userId) {
+        HttpHeaders headers = jsonHeaders();
+        headers.setBearerAuth(accessToken);
+        UserAssertionSigner.sign(headers, credentials, method, path, queryString, userId);
+        return new HttpEntity<>(headers);
     }
 
     private HttpEntity<String> jsonEntity(String body) {

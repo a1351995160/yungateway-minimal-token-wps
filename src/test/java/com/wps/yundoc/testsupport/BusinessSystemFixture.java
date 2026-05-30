@@ -4,8 +4,12 @@ import com.wps.yundoc.auth.application.ClientSecretDigestService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Base64;
 
 @Component
 public class BusinessSystemFixture {
@@ -13,6 +17,8 @@ public class BusinessSystemFixture {
     private static final String DIGEST_ALGORITHM = "HMAC-SHA256";
     private static final String DEFAULT_SECRET = "test-client-secret";
     private static final int DEFAULT_JWT_TTL_SECONDS = 1800;
+    private static final String KEY_ALGORITHM = "RSA";
+    private static final int RSA_KEY_BITS = 2048;
 
     private final JdbcTemplate jdbcTemplate;
     private final ClientSecretDigestService digestService;
@@ -66,21 +72,23 @@ public class BusinessSystemFixture {
         String clientId = "cli-" + businessSystemId;
         String salt = "salt-" + businessSystemId;
         String digest = digestService.digest(clientSecret, salt, DIGEST_ALGORITHM);
+        KeyPair userAssertionKeyPair = keyPair();
         LocalDateTime now = LocalDateTime.now();
         deleteExisting(businessSystemId, clientId);
         jdbcTemplate.update(
                 "INSERT INTO biz_system ("
                         + "business_system_id, business_system_name, client_id, "
                         + "client_secret_digest, client_secret_salt, client_secret_alg, "
-                        + "status, token_version, permission_version, jwt_ttl_seconds, "
+                        + "user_assertion_public_key, status, token_version, permission_version, jwt_ttl_seconds, "
                         + "description, created_at, updated_at"
-                        + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 businessSystemId,
                 "Test Business System",
                 clientId,
                 digest,
                 salt,
                 DIGEST_ALGORITHM,
+                publicKeyPem(userAssertionKeyPair),
                 status,
                 1,
                 1,
@@ -89,7 +97,27 @@ public class BusinessSystemFixture {
                 now,
                 now);
         Arrays.stream(apiCodes).forEach(apiCode -> insertPermission(businessSystemId, apiCode));
-        return new BusinessSystemCredentials(businessSystemId, clientId, clientSecret);
+        return new BusinessSystemCredentials(
+                businessSystemId,
+                clientId,
+                clientSecret,
+                userAssertionKeyPair.getPrivate());
+    }
+
+    private KeyPair keyPair() {
+        try {
+            KeyPairGenerator generator = KeyPairGenerator.getInstance(KEY_ALGORITHM);
+            generator.initialize(RSA_KEY_BITS);
+            return generator.generateKeyPair();
+        } catch (GeneralSecurityException ex) {
+            throw new IllegalStateException("User assertion key generation failed", ex);
+        }
+    }
+
+    private String publicKeyPem(KeyPair keyPair) {
+        String encoded = Base64.getMimeEncoder(64, new byte[] {'\n'})
+                .encodeToString(keyPair.getPublic().getEncoded());
+        return "-----BEGIN PUBLIC KEY-----\n" + encoded + "\n-----END PUBLIC KEY-----";
     }
 
     private void deleteExisting(String businessSystemId, String clientId) {

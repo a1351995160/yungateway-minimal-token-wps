@@ -26,6 +26,9 @@ yundoc:
     max-failures-per-remote-address: 20
     max-tracked-keys: 10000
     window: 1m
+  user-assertion:
+    max-clock-skew: 5m
+    max-tracked-nonces: 10000
   readiness:
     tdsql-required: true
   wps-client:

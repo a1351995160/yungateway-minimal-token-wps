@@ -11,6 +11,7 @@
         <result property="clientSecretDigest" column="client_secret_digest"/>
         <result property="clientSecretSalt" column="client_secret_salt"/>
         <result property="clientSecretAlg" column="client_secret_alg"/>
+        <result property="userAssertionPublicKey" column="user_assertion_public_key"/>
         <result property="status" column="status"/>
         <result property="tokenVersion" column="token_version"/>
         <result property="permissionVersion" column="permission_version"/>
@@ -27,6 +28,7 @@
         client_secret_digest,
         client_secret_salt,
         client_secret_alg,
+        user_assertion_public_key,
         status,
         token_version,
         permission_version,

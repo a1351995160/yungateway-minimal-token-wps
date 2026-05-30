@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS biz_system (
     client_secret_digest CHAR(64) NOT NULL COMMENT 'client secret digest',
     client_secret_salt VARCHAR(64) NOT NULL COMMENT 'client secret salt',
     client_secret_alg VARCHAR(32) NOT NULL COMMENT 'client secret digest algorithm',
+    user_assertion_public_key VARCHAR(1024) NULL COMMENT 'PEM public key for signed user assertions',
     status VARCHAR(16) NOT NULL COMMENT 'ENABLED or DISABLED',
     token_version INT UNSIGNED NOT NULL COMMENT 'jwt token version',
     permission_version INT UNSIGNED NOT NULL COMMENT 'api permission version',

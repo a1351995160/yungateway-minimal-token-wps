@@ -22,6 +22,7 @@ public class BizSystemPO {
     private String clientSecretDigest;
     private String clientSecretSalt;
     private String clientSecretAlg;
+    private String userAssertionPublicKey;
     private String status;
     private Integer tokenVersion;
     private Integer permissionVersion;
