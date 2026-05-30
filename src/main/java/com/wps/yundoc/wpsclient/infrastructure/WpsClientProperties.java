@@ -3,6 +3,8 @@ package com.wps.yundoc.wpsclient.infrastructure;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * WpsClientProperties component.
@@ -22,6 +24,7 @@ public class WpsClientProperties {
     private String oauthScope = "";
     private String appId = "";
     private String appSecret = "";
+    private List<String> previewUrlAllowedHosts = new ArrayList<>();
     private Duration connectTimeout = Duration.ofSeconds(2);
     private Duration readTimeout = Duration.ofSeconds(5);
     private int maxRetries = 1;
@@ -104,6 +107,14 @@ public class WpsClientProperties {
 
     public void setAppSecret(String appSecret) {
         this.appSecret = appSecret;
+    }
+
+    public List<String> getPreviewUrlAllowedHosts() {
+        return previewUrlAllowedHosts;
+    }
+
+    public void setPreviewUrlAllowedHosts(List<String> previewUrlAllowedHosts) {
+        this.previewUrlAllowedHosts = previewUrlAllowedHosts;
     }
 
     public Duration getConnectTimeout() {

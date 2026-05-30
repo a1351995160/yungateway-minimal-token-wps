@@ -24,8 +24,14 @@ public class UserAssertionNonceCache {
 
     public boolean markUsed(String businessSystemId, String nonce, long expiresAtEpochSecond) {
         evictExpired();
-        Long existing = nonces.putIfAbsent(key(businessSystemId, nonce), Long.valueOf(expiresAtEpochSecond));
-        evictOverflow();
+        String cacheKey = key(businessSystemId, nonce);
+        if (nonces.containsKey(cacheKey)) {
+            return false;
+        }
+        if (nonces.size() >= maxTrackedNonces()) {
+            return false;
+        }
+        Long existing = nonces.putIfAbsent(cacheKey, Long.valueOf(expiresAtEpochSecond));
         return existing == null;
     }
 
@@ -35,14 +41,6 @@ public class UserAssertionNonceCache {
             if (entry.getValue().longValue() <= now) {
                 nonces.remove(entry.getKey(), entry.getValue());
             }
-        }
-    }
-
-    private void evictOverflow() {
-        while (nonces.size() > maxTrackedNonces()) {
-            nonces.keySet().stream()
-                    .findFirst()
-                    .ifPresent(nonces::remove);
         }
     }
 

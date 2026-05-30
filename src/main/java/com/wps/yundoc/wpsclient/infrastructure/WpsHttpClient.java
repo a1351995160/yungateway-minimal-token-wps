@@ -13,8 +13,13 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -23,6 +28,9 @@ import java.util.Objects;
  * @author WPS
  */
 public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
+
+    private static final String HTTPS_SCHEME = "https";
+    private static final long PREVIEW_EXPIRY_SKEW_SECONDS = 30L;
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
@@ -45,7 +53,7 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
         WpsPreviewResponse response = WpsClientSupport.executeWithRetry(
                 properties,
                 () -> executePreviewOnce(request));
-        return toPreviewLink(response);
+        return toPreviewLink(response, request);
     }
 
     @Override
@@ -73,9 +81,11 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
                 WpsAppTokenResponse.class).getBody();
     }
 
-    private WpsPreviewLink toPreviewLink(WpsPreviewResponse response) {
+    private WpsPreviewLink toPreviewLink(WpsPreviewResponse response, WpsPreviewRequest request) {
         PreviewData data = requirePreviewData(response);
         OffsetDateTime expireAt = parseExpireAt(data.getExpireAt());
+        validatePreviewUrl(data.getPreviewUrl());
+        validatePreviewExpiry(expireAt, request);
         return new WpsPreviewLink(data.getPreviewUrl(), expireAt);
     }
 
@@ -144,6 +154,55 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
             return OffsetDateTime.parse(expireAt);
         } catch (DateTimeParseException ex) {
             throw WpsClientSupport.upstreamError(ex);
+        }
+    }
+
+    private void validatePreviewUrl(String previewUrl) {
+        URI uri = uri(previewUrl);
+        if (!HTTPS_SCHEME.equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
+            throw WpsClientSupport.upstreamError(null);
+        }
+        if (uri.getUserInfo() != null || !allowedPreviewHosts().contains(normalizeHost(uri.getHost()))) {
+            throw WpsClientSupport.upstreamError(null);
+        }
+    }
+
+    private List<String> allowedPreviewHosts() {
+        List<String> configuredHosts = properties.getPreviewUrlAllowedHosts();
+        if (configuredHosts != null && !configuredHosts.isEmpty()) {
+            return normalizeHosts(configuredHosts);
+        }
+        return normalizeHosts(java.util.Collections.singletonList(uri(properties.getBaseUrl()).getHost()));
+    }
+
+    private List<String> normalizeHosts(List<String> hosts) {
+        List<String> normalized = new ArrayList<>();
+        for (String host : hosts) {
+            if (Texts.hasText(host)) {
+                normalized.add(normalizeHost(host));
+            }
+        }
+        return normalized;
+    }
+
+    private String normalizeHost(String host) {
+        return host.toLowerCase(Locale.ROOT);
+    }
+
+    private URI uri(String value) {
+        try {
+            return new URI(value);
+        } catch (URISyntaxException ex) {
+            throw WpsClientSupport.upstreamError(ex);
+        }
+    }
+
+    private void validatePreviewExpiry(OffsetDateTime expireAt, WpsPreviewRequest request) {
+        OffsetDateTime maxExpireAt = OffsetDateTime.now(expireAt.getOffset())
+                .plusSeconds(request.getExpireSeconds())
+                .plusSeconds(PREVIEW_EXPIRY_SKEW_SECONDS);
+        if (expireAt.isAfter(maxExpireAt)) {
+            throw WpsClientSupport.upstreamError(null);
         }
     }
 

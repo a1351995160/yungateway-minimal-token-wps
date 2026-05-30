@@ -63,6 +63,7 @@ public class UserAssertionVerifier {
         long timestampEpochSecond = validTimestamp(timestamp);
         verifySignature(signature, signingInput(
                 request,
+                context,
                 assertedUserId,
                 timestamp,
                 nonce));
@@ -127,12 +128,15 @@ public class UserAssertionVerifier {
 
     private String signingInput(
             HttpServletRequest request,
+            RequestContext context,
             String userId,
             String timestamp,
             String nonce) {
         return request.getMethod() + "\n"
                 + applicationPath(request) + "\n"
                 + queryString(request) + "\n"
+                + context.getBusinessSystemId() + "\n"
+                + context.getClientId() + "\n"
                 + userId + "\n"
                 + timestamp + "\n"
                 + nonce;

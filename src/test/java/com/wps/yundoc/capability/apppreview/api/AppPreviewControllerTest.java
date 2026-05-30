@@ -74,6 +74,20 @@ class AppPreviewControllerTest {
     }
 
     @Test
+    void rejectsInvalidPreviewFileIdShape() {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-app-preview-invalid-file-id", "app-preview:create");
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url("/api/v1/app/previews"),
+                HttpMethod.POST,
+                authorized(accessToken(credentials), previewJson("../secret")),
+                String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void rejectsAppPreviewWithoutPermission() {
         BusinessSystemCredentials credentials =
                 businessSystemFixture.enabled("biz-app-preview-denied", "user-files:list");

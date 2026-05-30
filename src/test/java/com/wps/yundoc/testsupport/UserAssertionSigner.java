@@ -44,7 +44,10 @@ public final class UserAssertionSigner {
         headers.set(UserAssertionVerifier.NONCE_HEADER, nonce);
         headers.set(UserAssertionVerifier.SIGNATURE_HEADER, signature(
                 credentials,
-                method + "\n" + path + "\n" + queryString + "\n" + userId + "\n" + timestamp + "\n" + nonce));
+                method + "\n" + path + "\n" + queryString + "\n"
+                        + credentials.getBusinessSystemId() + "\n"
+                        + credentials.getClientId() + "\n"
+                        + userId + "\n" + timestamp + "\n" + nonce));
     }
 
     private static String signature(BusinessSystemCredentials credentials, String signingInput) {

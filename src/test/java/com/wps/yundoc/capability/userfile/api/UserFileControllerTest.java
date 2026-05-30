@@ -173,6 +173,24 @@ class UserFileControllerTest {
         assertThat(error.path("code").asText()).isEqualTo("USER_ASSERTION_INVALID");
     }
 
+    @Test
+    void rejectsUserAssertionSignedForAnotherBusinessSystem() throws IOException {
+        BusinessSystemCredentials signerCredentials = userFileCredentials("biz-user-files-signer");
+        BusinessSystemCredentials tokenCredentials = userFileCredentials("biz-user-files-token");
+        String token = accessToken(tokenCredentials);
+        String queryString = "userId=user-009";
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url("/api/v1/user/files?" + queryString),
+                HttpMethod.GET,
+                authorized(signerCredentials, token, "GET", "/api/v1/user/files", queryString, "user-009"),
+                String.class);
+
+        JsonNode error = objectMapper.readTree(response.getBody()).path("error");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(error.path("code").asText()).isEqualTo("USER_ASSERTION_INVALID");
+    }
+
     private ResponseEntity<String> getFiles(String token, String query) {
         return restTemplate.exchange(
                 url("/api/v1/user/files" + query),
