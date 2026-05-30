@@ -1,45 +1,65 @@
 # WPS Yundoc Capability Gateway
 
-WPS 云文档能力中转服务的最小 MVP 后端。当前实现聚焦服务端到服务端接入：业务系统注册、管理端登录、内部 JWT 签发、能力权限校验、APP 预览、USER 文件列表授权闭环，以及本地 mock WPS 流程。
+WPS 云文档能力网关是业务系统访问 WPS OpenAPI 的服务端中转层。它负责统一封装 WPS 凭证、业务系统认证、API 权限校验、APP 预览、USER 授权文件列表和基础安全防护，避免业务系统直接接触 WPS `appSecret`、`access_token`、`refresh_token` 等敏感材料。
 
-## 技术基线
+当前代码是 MVP 后端实现，适合服务端到服务端接入。`local` 和 `test` profile 使用本地 mock WPS client，非 `local/test` profile 使用真实 WPS HTTP client。
+
+## 技术栈
 
 - Java 8
 - Spring Boot 2.7.18 / Spring Framework 5.3.x
 - MyBatis / MyBatis-Plus
-- MySQL schema SQL
-- MySQL local/test profiles, TDSQL MySQL compatible production target
+- MySQL / TDSQL MySQL compatible
+- Maven
+- PMD / Alibaba P3C / SonarCloud
 
-## 本地运行
+## 快速开始
 
 ```powershell
-.\mvnw.cmd test
+.\mvnw.cmd clean verify pmd:pmd
 .\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
-详细步骤见 [MVP 本地运行手册](docs/runbooks/mvp-local-run.zh.md)。
+本地运行前需要准备 MySQL 和必要环境变量。详细步骤见 [MVP 本地运行手册](docs/runbooks/mvp-local-run.zh.md)。
 
-## MVP Smoke
+## 文档入口
+
+- [工程文档总览](docs/index.zh-CN.md)
+- [项目介绍](docs/project-overview.zh-CN.md)
+- [架构设计](docs/architecture-design.zh-CN.md)
+- [核心链路](docs/core-flows.zh-CN.md)
+- [API 契约](docs/api-contract.zh-CN.md)
+- [WPS 对接流程](docs/wps-integration.zh-CN.md)
+- [USER 授权流程](docs/user-authorization.zh-CN.md)
+- [数据库设计](docs/database-design.zh-CN.md)
+- [安全设计](docs/security-design.zh-CN.md)
+- [测试与质量](docs/testing-quality.zh-CN.md)
+- [部署与运维](docs/deployment-operations.zh-CN.md)
+- [代码规范](docs/coding-standards.md)
+
+## 主要能力
+
+- 业务系统使用 `clientId + clientSecret` 换取内部 JWT。
+- 网关根据 JWT 中的业务系统身份和数据库权限配置校验 API 能力。
+- APP 模式使用网关维护的 WPS app token 创建预览链接。
+- USER 模式通过用户断言签名绑定 `userId`，再使用 WPS user token 访问用户文件列表。
+- 缺少 WPS user token 时返回 `REAUTH_REQUIRED` 和 WPS 授权地址，授权回调后缓存 user token。
+
+## 当前边界
+
+- 持久化表目前只有业务系统和 API 权限配置。
+- APP token、USER token、OAuth state 当前使用本地内存缓存，生产多实例需要替换为 Redis 或数据库。
+- 文件预览当前实现的是 `WPS_FILE` 类型，也就是业务方传入 WPS 文件 `fileId` 后生成预览链接；直接接收业务方文件流并上传到 WPS 的链路尚未实现。
+- JWT 和 USER 断言只适合服务端到服务端调用，不应下发给浏览器或移动端。
+
+## Graphify
+
+本地已可通过 Graphify 生成代码图谱：
 
 ```powershell
-.\mvnw.cmd -Dtest=MvpSmokeTest test
+graphify update .
+graphify query "认证鉴权流程是什么" --graph graphify-out\graph.json
+graphify path "AuthController" "WpsHttpClient" --graph graphify-out\graph.json
 ```
 
-Smoke 流程覆盖：
-
-1. 管理员登录并获取 `adminJwt`
-2. 创建业务系统并获取一次性 `clientSecret`
-3. 配置 `app-preview:create` 与 `user-files:list`
-4. 使用 `clientId + clientSecret` 换取内部 JWT
-5. 使用 mock WPS 完成 APP 预览
-6. USER 文件列表首次返回 `REAUTH_REQUIRED` 与 `authorizeUrl`
-7. OAuth callback 写入本地 USER token
-8. USER 文件列表再次调用成功
-
-## 部署约束
-
-- MVP 只支持单实例或粘性会话；OAuth state、APP token、USER token 当前使用本地内存缓存。
-- 生产必须使用 HTTPS 或受控内网 TLS。
-- 业务系统 JWT 只允许服务端到服务端调用，不下发到浏览器或移动端。
-- 生产密钥必须来自环境变量、配置中心或密钥系统，不能提交到仓库。
-- 上线前按 [MVP 部署检查清单](docs/runbooks/mvp-deploy-checklist.zh.md) 核对。
+`graphify-out/` 是本地分析产物，不纳入 Git。
