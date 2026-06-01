@@ -13,6 +13,7 @@ import java.time.Duration;
 public class WpsUserAuthorizationProperties {
 
     private Duration stateTtl = Duration.ofMinutes(5);
+    private Duration refreshSkew = Duration.ofMinutes(5);
     private int maxStateCount = 10000;
 
     public Duration getStateTtl() {
@@ -21,6 +22,14 @@ public class WpsUserAuthorizationProperties {
 
     public void setStateTtl(Duration stateTtl) {
         this.stateTtl = stateTtl;
+    }
+
+    public Duration getRefreshSkew() {
+        return refreshSkew;
+    }
+
+    public void setRefreshSkew(Duration refreshSkew) {
+        this.refreshSkew = refreshSkew;
     }
 
     public int getMaxStateCount() {

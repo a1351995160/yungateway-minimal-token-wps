@@ -2,7 +2,7 @@
 
 ## 当前持久化范围
 
-当前数据库只保存业务系统接入配置和 API 权限配置。WPS app token、WPS user token、OAuth state 和 USER 断言 nonce 当前保存在本地内存缓存中。
+当前数据库保存业务系统接入配置、API 权限配置，以及 APP 预览上传在 WPS 中的业务系统文件夹映射。WPS app token、WPS user token、OAuth state 和 USER 断言 nonce 当前保存在本地内存缓存中。
 
 数据库脚本：
 
@@ -15,6 +15,7 @@
 ```mermaid
 erDiagram
     biz_system ||--o{ biz_system_api_permission : has
+    biz_system ||--o{ app_preview_folder : owns
 
     biz_system {
         varchar business_system_id PK
@@ -36,6 +37,15 @@ erDiagram
         varchar business_system_id PK
         varchar api_code PK
         varchar status
+        datetime created_at
+        datetime updated_at
+    }
+
+    app_preview_folder {
+        varchar business_system_id PK
+        varchar drive_id PK
+        varchar folder_id
+        varchar folder_name
         datetime created_at
         datetime updated_at
     }
@@ -81,6 +91,21 @@ erDiagram
 | `updated_at` | `DATETIME(3)` | NOT NULL | 更新时间。 |
 
 主键为 `(business_system_id, api_code)`，用于能力 API 鉴权。
+
+## app_preview_folder
+
+APP 预览上传的 WPS 文件夹映射表。服务按业务系统在 WPS 应用盘下准备独立文件夹，并把映射保存下来，避免每次预览都重新遍历或创建文件夹。
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| `business_system_id` | `VARCHAR(64)` | PK | 业务系统 ID。 |
+| `drive_id` | `VARCHAR(128)` | PK | WPS 应用盘 ID。 |
+| `folder_id` | `VARCHAR(128)` | NOT NULL | WPS 业务系统文件夹 ID。 |
+| `folder_name` | `VARCHAR(160)` | NOT NULL | WPS 业务系统文件夹名称。 |
+| `created_at` | `DATETIME(3)` | NOT NULL | 创建时间。 |
+| `updated_at` | `DATETIME(3)` | NOT NULL | 更新时间。 |
+
+主键为 `(business_system_id, drive_id)`。当本地映射缺失但 WPS 侧文件夹已存在时，服务会通过 WPS 子文件列表重新识别并写回映射。
 
 ## 权限版本设计
 

@@ -28,10 +28,10 @@ yundoc:
   wps-client:
     base-url: https://wps.test
     preview-path: /api/preview-links
-    token-path: /oauth/token
+    token-path: /oauth2/token
     file-list-path: /api/user/files
-    authorize-path: /oauth/authorize
-    user-token-path: /oauth/user-token
+    authorize-path: /oauth2/auth
+    user-token-path: /oauth2/token
     redirect-uri: https://gateway.test/api/v1/wps/oauth/callback
     oauth-scope: files.read
     app-id: test-wps-app-id
@@ -39,8 +39,16 @@ yundoc:
     connect-timeout: 1s
     read-timeout: 1s
     max-retries: 1
+    upload-url-allowed-host-suffixes:
+      - wps.test
+  app-preview-upload:
+    auto-create-drive: true
+    drive-name: YunDoc Preview
+    root-parent-id: "0"
+    max-file-size-bytes: 1048576
   wps-credential:
     refresh-skew: 5m
     max-user-token-count: 10000
   wps-user-authorization:
+    refresh-skew: 5m
     max-state-count: 10000

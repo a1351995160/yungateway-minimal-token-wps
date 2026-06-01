@@ -86,11 +86,20 @@ public class WpsRequestSigner {
             String contentType,
             String ksoDate,
             byte[] requestBody) {
+        return kso1SignWithBodySha256(method, requestUri, contentType, ksoDate, sha256Hex(requestBody));
+    }
+
+    public WpsSignatureHeaders kso1SignWithBodySha256(
+            String method,
+            String requestUri,
+            String contentType,
+            String ksoDate,
+            String bodySha256) {
         requireCredentials();
         String signature = hex(hmac(
                 HMAC_SHA256,
                 secretKey,
-                KSO_1 + method + requestUri + contentType + ksoDate + sha256Hex(requestBody)));
+                KSO_1 + method + requestUri + contentType + ksoDate + bodySha256));
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put(KSO_DATE_HEADER, ksoDate);
         headers.put(KSO_AUTHORIZATION_HEADER, KSO_1 + " " + accessKey + ":" + signature);

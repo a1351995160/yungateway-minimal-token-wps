@@ -3,6 +3,7 @@ package com.wps.yundoc.auth.infrastructure;
 import com.wps.yundoc.auth.application.JwtService;
 import com.wps.yundoc.auth.domain.BusinessSystemPrincipal;
 import com.wps.yundoc.businesssystem.application.BusinessSystemApiPermissionService;
+import com.wps.yundoc.businesssystem.domain.ApiCode;
 import com.wps.yundoc.common.context.RequestContext;
 import com.wps.yundoc.common.context.RequestContextHolder;
 import com.wps.yundoc.common.error.YundocErrorCode;
@@ -67,6 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String apiCode) throws ServletException, IOException {
         try {
             BusinessSystemPrincipal principal = jwtService.validate(bearerToken(request));
+            requireIdentityType(principal, apiCode);
             permissionService.requirePermission(principal, apiCode);
             RequestContextHolder.set(requestContext(principal, apiCode));
             filterChain.doFilter(request, response);
@@ -80,11 +82,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return RequestContext.builder(requestId)
                 .businessSystemId(principal.getBusinessSystemId())
                 .clientId(principal.getClientId())
+                .identityType(principal.getIdentityType())
                 .jti(principal.getJti())
                 .tokenVersion(principal.getTokenVersion())
                 .permissionVersion(principal.getPermissionVersion())
                 .apiCode(apiCode)
+                .userId(principal.getUserId())
                 .build();
+    }
+
+    private void requireIdentityType(BusinessSystemPrincipal principal, String apiCode) {
+        ApiCode routeApiCode = ApiCode.fromCode(apiCode)
+                .orElseThrow(() -> new YundocException(YundocErrorCode.API_PERMISSION_DENIED));
+        if (routeApiCode.getIdentityType() != principal.getIdentityType()) {
+            throw new YundocException(YundocErrorCode.API_PERMISSION_DENIED);
+        }
     }
 
     private String bearerToken(HttpServletRequest request) {

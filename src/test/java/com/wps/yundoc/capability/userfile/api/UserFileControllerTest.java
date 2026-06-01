@@ -23,7 +23,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.io.IOException;
 import java.net.URI;
-import java.time.Instant;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,9 +46,9 @@ class UserFileControllerTest {
     @Test
     void returnsReauthWhenUserTokenMissing() throws IOException {
         BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-reauth");
-        String token = accessToken(credentials);
+        String token = userAccessToken(credentials, "user-001");
 
-        ResponseEntity<String> response = getFiles(credentials, token, "userId=user-001");
+        ResponseEntity<String> response = getFiles(token, "");
 
         JsonNode error = objectMapper.readTree(response.getBody()).path("error");
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
@@ -64,7 +63,7 @@ class UserFileControllerTest {
             String query,
             String expectedCode) throws IOException {
         BusinessSystemCredentials credentials = userFileCredentials(businessSystemId);
-        String token = accessToken(credentials);
+        String token = userAccessToken(credentials, "user-001");
 
         ResponseEntity<String> response = getFiles(token, query);
 
@@ -76,14 +75,14 @@ class UserFileControllerTest {
     @Test
     void callbackStoresTokenAndFileListSucceeds() throws IOException {
         BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-success");
-        String token = accessToken(credentials);
-        ResponseEntity<String> first = getFiles(credentials, token, "userId=user-003");
+        String token = userAccessToken(credentials, "user-003");
+        ResponseEntity<String> first = getFiles(token, "");
         String state = stateFrom(first);
 
         ResponseEntity<String> callback = restTemplate.getForEntity(
                 url("/api/v1/wps/oauth/callback?code=ok-code&state=" + state),
                 String.class);
-        ResponseEntity<String> second = getFiles(credentials, token, "userId=user-003&parentFileId=root&limit=20");
+        ResponseEntity<String> second = getFiles(token, "?parentFileId=root&limit=20");
 
         JsonNode data = objectMapper.readTree(second.getBody()).path("data");
         assertThat(callback.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -93,102 +92,76 @@ class UserFileControllerTest {
     }
 
     @Test
-    void rejectsUserFileRequestWithoutUserAssertion() throws IOException {
-        BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-no-assertion");
-        String token = accessToken(credentials);
+    void returnsAuthorizationUrlForUserJwt() throws IOException {
+        BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-authorize-url");
+        String token = userAccessToken(credentials, "user-004");
 
-        ResponseEntity<String> response = getFiles(token, "?userId=user-004");
+        ResponseEntity<String> response = restTemplate.exchange(
+                url("/api/v1/wps/oauth/authorize-url"),
+                HttpMethod.GET,
+                authorized(token),
+                String.class);
 
-        JsonNode error = objectMapper.readTree(response.getBody()).path("error");
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(error.path("code").asText()).isEqualTo("USER_ASSERTION_INVALID");
+        JsonNode data = objectMapper.readTree(response.getBody()).path("data");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(data.path("authorizeUrl").asText()).contains("state=");
+        assertThat(data.path("expiresIn").asLong()).isPositive();
     }
 
     @Test
-    void rejectsUserFileRequestWhenAssertionUserIdDiffersFromQuery() throws IOException {
+    void rejectsUserFileRequestWhenQueryUserIdDiffersFromJwtUserId() throws IOException {
         BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-user-mismatch");
-        String token = accessToken(credentials);
+        String token = userAccessToken(credentials, "user-005");
 
-        ResponseEntity<String> response = getFiles(credentials, token, "userId=user-005", "user-006");
+        ResponseEntity<String> response = getFiles(token, "?userId=user-006");
 
         JsonNode error = objectMapper.readTree(response.getBody()).path("error");
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(error.path("code").asText()).isEqualTo("USER_ASSERTION_INVALID");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(error.path("code").asText()).isEqualTo("VALIDATION_FAILED");
     }
 
     @Test
-    void rejectsReplayedUserAssertionNonce() throws IOException {
-        BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-replay");
-        String token = accessToken(credentials);
-        String queryString = "userId=user-007";
-        HttpEntity<String> signedRequest = signedRequest(
-                credentials,
-                token,
-                queryString,
-                "user-007",
-                String.valueOf(Instant.now().getEpochSecond()),
-                "fixed-replay-nonce");
-
-        ResponseEntity<String> first = restTemplate.exchange(
-                url("/api/v1/user/files?" + queryString),
-                HttpMethod.GET,
-                signedRequest,
-                String.class);
-        ResponseEntity<String> second = restTemplate.exchange(
-                url("/api/v1/user/files?" + queryString),
-                HttpMethod.GET,
-                signedRequest,
-                String.class);
-
-        JsonNode error = objectMapper.readTree(second.getBody()).path("error");
-        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(objectMapper.readTree(first.getBody()).path("error").path("code").asText())
-                .isEqualTo("REAUTH_REQUIRED");
-        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(error.path("code").asText()).isEqualTo("USER_ASSERTION_INVALID");
-    }
-
-    @Test
-    void rejectsUserFileRequestWhenSignedQueryIsChanged() throws IOException {
-        BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-query-tamper");
-        String token = accessToken(credentials);
-        String signedQueryString = "userId=user-008";
-        String actualQueryString = "userId=user-008&parentFileId=secret";
-        HttpEntity<String> signedRequest = signedRequest(
-                credentials,
-                token,
-                signedQueryString,
-                "user-008",
-                String.valueOf(Instant.now().getEpochSecond()),
-                "fixed-query-nonce");
+    void rejectsAppJwtOnUserFileRequest() throws IOException {
+        BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-app-jwt");
+        String token = appAccessToken(credentials);
 
         ResponseEntity<String> response = restTemplate.exchange(
-                url("/api/v1/user/files?" + actualQueryString),
+                url("/api/v1/user/files"),
                 HttpMethod.GET,
-                signedRequest,
+                authorized(token),
                 String.class);
 
         JsonNode error = objectMapper.readTree(response.getBody()).path("error");
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(error.path("code").asText()).isEqualTo("USER_ASSERTION_INVALID");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.path("code").asText()).isEqualTo("API_PERMISSION_DENIED");
     }
 
     @Test
-    void rejectsUserAssertionSignedForAnotherBusinessSystem() throws IOException {
-        BusinessSystemCredentials signerCredentials = userFileCredentials("biz-user-files-signer");
-        BusinessSystemCredentials tokenCredentials = userFileCredentials("biz-user-files-token");
-        String token = accessToken(tokenCredentials);
-        String queryString = "userId=user-009";
+    void rejectsUserJwtOnAppPreviewRequest() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-user-jwt-preview", "app-preview:create");
+        String token = userAccessToken(credentials, "user-010");
+        String body = "{\"source\":{\"type\":\"WPS_FILE\",\"fileId\":\"wps-file-001\"}}";
 
         ResponseEntity<String> response = restTemplate.exchange(
-                url("/api/v1/user/files?" + queryString),
-                HttpMethod.GET,
-                authorized(signerCredentials, token, "GET", "/api/v1/user/files", queryString, "user-009"),
+                url("/api/v1/app/previews"),
+                HttpMethod.POST,
+                jsonWithBearer(body, token),
                 String.class);
 
         JsonNode error = objectMapper.readTree(response.getBody()).path("error");
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(error.path("code").asText()).isEqualTo("USER_ASSERTION_INVALID");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.path("code").asText()).isEqualTo("API_PERMISSION_DENIED");
+    }
+
+    private static Stream<Arguments> invalidUserFileQueries() {
+        return Stream.of(
+                Arguments.of(
+                        "biz-user-files-bad-user",
+                        "?userId=user-001&userId=user-002",
+                        "VALIDATION_FAILED"),
+                Arguments.of("biz-user-files-invalid-shape", "?userId=bad user", "VALIDATION_FAILED"),
+                Arguments.of("biz-user-files-blank-user", "?userId=%20", "VALIDATION_FAILED"));
     }
 
     private ResponseEntity<String> getFiles(String token, String query) {
@@ -197,36 +170,6 @@ class UserFileControllerTest {
                 HttpMethod.GET,
                 authorized(token),
                 String.class);
-    }
-
-    private ResponseEntity<String> getFiles(
-            BusinessSystemCredentials credentials,
-            String token,
-            String queryString) {
-        return getFiles(credentials, token, queryString, queryUserId(queryString));
-    }
-
-    private ResponseEntity<String> getFiles(
-            BusinessSystemCredentials credentials,
-            String token,
-            String queryString,
-            String assertedUserId) {
-        return restTemplate.exchange(
-                url("/api/v1/user/files?" + queryString),
-                HttpMethod.GET,
-                authorized(credentials, token, "GET", "/api/v1/user/files", queryString, assertedUserId),
-                String.class);
-    }
-
-    private static Stream<Arguments> invalidUserFileQueries() {
-        return Stream.of(
-                Arguments.of("biz-user-files-missing-user", "", "USER_ID_REQUIRED"),
-                Arguments.of(
-                        "biz-user-files-bad-user",
-                        "?userId=user-001&userId=user-002",
-                        "VALIDATION_FAILED"),
-                Arguments.of("biz-user-files-invalid-shape", "?userId=bad user", "VALIDATION_FAILED"),
-                Arguments.of("biz-user-files-blank-user", "?userId=%20", "VALIDATION_FAILED"));
     }
 
     private String stateFrom(ResponseEntity<String> response) throws IOException {
@@ -239,12 +182,27 @@ class UserFileControllerTest {
         return businessSystemFixture.enabled(businessSystemId, "user-files:list");
     }
 
-    private String accessToken(BusinessSystemCredentials credentials) {
+    private String appAccessToken(BusinessSystemCredentials credentials) {
         String body = "{\"clientId\":\"" + credentials.getClientId()
                 + "\",\"clientSecret\":\"" + credentials.getClientSecret() + "\"}";
+        return accessToken(body);
+    }
+
+    private String userAccessToken(BusinessSystemCredentials credentials, String userId) {
+        String body = "{\"clientId\":\"" + credentials.getClientId()
+                + "\",\"clientSecret\":\"" + credentials.getClientSecret()
+                + "\",\"identityType\":\"USER\",\"userId\":\"" + userId + "\"}";
+        return accessToken(signedJson(body, credentials, userId));
+    }
+
+    private String accessToken(String body) {
+        return accessToken(json(body));
+    }
+
+    private String accessToken(HttpEntity<String> entity) {
         ResponseEntity<String> response = restTemplate.postForEntity(
                 url("/api/v1/auth/token"),
-                json(body),
+                entity,
                 String.class);
         return readAccessToken(response);
     }
@@ -263,46 +221,23 @@ class UserFileControllerTest {
         return new HttpEntity<>(headers);
     }
 
-    private HttpEntity<String> authorized(
-            BusinessSystemCredentials credentials,
-            String token,
-            String method,
-            String path,
-            String queryString,
-            String userId) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        UserAssertionSigner.sign(headers, credentials, method, path, queryString, userId);
-        return new HttpEntity<>(headers);
-    }
-
-    private HttpEntity<String> signedRequest(
-            BusinessSystemCredentials credentials,
-            String token,
-            String queryString,
-            String userId,
-            String timestamp,
-            String nonce) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        UserAssertionSigner.sign(
-                headers,
-                credentials,
-                "GET",
-                "/api/v1/user/files",
-                queryString,
-                userId,
-                timestamp,
-                nonce);
-        return new HttpEntity<>(headers);
-    }
-
-    private String queryUserId(String queryString) {
-        return queryString.replaceFirst("^.*userId=([^&]+).*$", "$1");
-    }
-
     private HttpEntity<String> json(String body) {
         return new HttpEntity<>(body, jsonHeaders());
+    }
+
+    private HttpEntity<String> signedJson(
+            String body,
+            BusinessSystemCredentials credentials,
+            String userId) {
+        HttpHeaders headers = jsonHeaders();
+        UserAssertionSigner.sign(headers, credentials, "POST", "/api/v1/auth/token", "", userId);
+        return new HttpEntity<>(body, headers);
+    }
+
+    private HttpEntity<String> jsonWithBearer(String body, String token) {
+        HttpHeaders headers = jsonHeaders();
+        headers.setBearerAuth(token);
+        return new HttpEntity<>(body, headers);
     }
 
     private HttpHeaders jsonHeaders() {

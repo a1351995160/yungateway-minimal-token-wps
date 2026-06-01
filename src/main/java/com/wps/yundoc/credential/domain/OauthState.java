@@ -12,12 +12,23 @@ public class OauthState {
     private final String state;
     private final String userId;
     private final String businessSystemId;
+    private final String clientId;
     private final OffsetDateTime expiresAt;
 
     public OauthState(String state, String userId, String businessSystemId, OffsetDateTime expiresAt) {
+        this(state, userId, businessSystemId, null, expiresAt);
+    }
+
+    public OauthState(
+            String state,
+            String userId,
+            String businessSystemId,
+            String clientId,
+            OffsetDateTime expiresAt) {
         this.state = state;
         this.userId = userId;
         this.businessSystemId = businessSystemId;
+        this.clientId = clientId;
         this.expiresAt = expiresAt;
     }
 
@@ -31,6 +42,10 @@ public class OauthState {
 
     public String getBusinessSystemId() {
         return businessSystemId;
+    }
+
+    public String getClientId() {
+        return clientId;
     }
 
     public OffsetDateTime getExpiresAt() {

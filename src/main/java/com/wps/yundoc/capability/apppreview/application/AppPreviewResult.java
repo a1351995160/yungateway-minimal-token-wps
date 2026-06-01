@@ -11,10 +11,12 @@ public class AppPreviewResult {
 
     private final String previewUrl;
     private final OffsetDateTime expireAt;
+    private final String fileId;
 
-    public AppPreviewResult(String previewUrl, OffsetDateTime expireAt) {
+    public AppPreviewResult(String previewUrl, OffsetDateTime expireAt, String fileId) {
         this.previewUrl = previewUrl;
         this.expireAt = expireAt;
+        this.fileId = fileId;
     }
 
     public String getPreviewUrl() {
@@ -23,5 +25,9 @@ public class AppPreviewResult {
 
     public OffsetDateTime getExpireAt() {
         return expireAt;
+    }
+
+    public String getFileId() {
+        return fileId;
     }
 }

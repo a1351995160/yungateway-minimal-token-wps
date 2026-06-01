@@ -6,11 +6,13 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.Objects;
 
 /**
@@ -22,7 +24,6 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
-    private final WpsRequestSigner signer;
 
     public WpsAuthorizationHttpClient(WpsClientProperties properties, RestTemplateBuilder builder) {
         this(properties, builder, WpsClientSupport.restTemplate(properties, builder));
@@ -35,7 +36,6 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
         Objects.requireNonNull(builder, "builder");
         this.properties = properties;
         this.restTemplate = restTemplate;
-        this.signer = WpsRequestSigner.fromProperties(properties);
     }
 
     @Override
@@ -51,46 +51,70 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
 
     @Override
     public WpsUserToken exchangeCode(String code) {
-        WpsAppTokenResponse response = WpsClientSupport.executeWithRetry(
+        WpsOauthTokenResponse response = WpsClientSupport.executeWithRetry(
                 properties,
-                () -> exchange(code));
+                () -> exchange(authorizationCodeBody(code)));
         return toUserToken(response);
     }
 
-    private WpsAppTokenResponse exchange(String code) {
+    @Override
+    public WpsUserToken refreshToken(String refreshToken) {
+        WpsOauthTokenResponse response = WpsClientSupport.executeWithRetry(
+                properties,
+                () -> exchange(refreshTokenBody(refreshToken)));
+        return toUserToken(response);
+    }
+
+    private WpsOauthTokenResponse exchange(MultiValueMap<String, String> body) {
         return restTemplate.exchange(
                 userTokenUrl(),
                 HttpMethod.POST,
-                entity(code),
-                WpsAppTokenResponse.class).getBody();
+                entity(body),
+                WpsOauthTokenResponse.class).getBody();
     }
 
-    private WpsUserToken toUserToken(WpsAppTokenResponse response) {
-        AppTokenData data = requireData(response);
-        return new WpsUserToken(data.getAccessToken(), parseExpireAt(data.getExpireAt()));
+    private WpsUserToken toUserToken(WpsOauthTokenResponse response) {
+        WpsOauthTokenResponse data = requireData(response);
+        return new WpsUserToken(
+                data.getAccessToken(),
+                expiresAt(data.getExpiresIn()),
+                data.getRefreshToken(),
+                expiresAt(data.getRefreshExpiresIn()),
+                data.getTokenType());
     }
 
-    private AppTokenData requireData(WpsAppTokenResponse response) {
-        AppTokenData data = WpsClientSupport.requireSuccessData(response);
+    private WpsOauthTokenResponse requireData(WpsOauthTokenResponse response) {
+        WpsOauthTokenResponse data = WpsClientSupport.requireData(response);
         WpsClientSupport.requireText(data.getAccessToken());
-        WpsClientSupport.requireText(data.getExpireAt());
+        WpsClientSupport.requireText(data.getRefreshToken());
         return data;
     }
 
-    private HttpEntity<byte[]> entity(String code) {
-        OauthCodePayload payload = new OauthCodePayload(
-                code,
-                properties.getAppId(),
-                properties.getAppSecret(),
-                properties.getRedirectUri());
-        byte[] body = WpsSignedRequestSupport.jsonBody(payload);
-        HttpHeaders headers = WpsSignedRequestSupport.signedJsonHeaders(
-                properties,
-                signer,
-                HttpMethod.POST.name(),
-                userTokenUrl(),
-                body);
+    private HttpEntity<MultiValueMap<String, String>> entity(MultiValueMap<String, String> body) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         return new HttpEntity<>(body, headers);
+    }
+
+    private MultiValueMap<String, String> authorizationCodeBody(String code) {
+        MultiValueMap<String, String> body = baseTokenBody("authorization_code");
+        body.add("code", code);
+        body.add("redirect_uri", properties.getRedirectUri());
+        return body;
+    }
+
+    private MultiValueMap<String, String> refreshTokenBody(String refreshToken) {
+        MultiValueMap<String, String> body = baseTokenBody("refresh_token");
+        body.add("refresh_token", refreshToken);
+        return body;
+    }
+
+    private MultiValueMap<String, String> baseTokenBody(String grantType) {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", grantType);
+        body.add("client_id", properties.getAppId());
+        body.add("client_secret", properties.getAppSecret());
+        return body;
     }
 
     private String baseAuthorizeUrl() {
@@ -101,11 +125,10 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
         return properties.getBaseUrl() + properties.getUserTokenPath();
     }
 
-    private OffsetDateTime parseExpireAt(String expireAt) {
-        try {
-            return OffsetDateTime.parse(expireAt);
-        } catch (DateTimeParseException ex) {
-            throw WpsClientSupport.upstreamError(ex);
+    private OffsetDateTime expiresAt(Long expiresIn) {
+        if (expiresIn == null || expiresIn.longValue() <= 0L) {
+            throw WpsClientSupport.upstreamError(null);
         }
+        return OffsetDateTime.now().plusSeconds(expiresIn.longValue());
     }
 }

@@ -24,3 +24,13 @@ CREATE TABLE IF NOT EXISTS biz_system_api_permission (
     updated_at DATETIME(3) NOT NULL COMMENT 'updated time',
     PRIMARY KEY (business_system_id, api_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='business system api permission';
+
+CREATE TABLE IF NOT EXISTS app_preview_folder (
+    business_system_id VARCHAR(64) NOT NULL COMMENT 'business system stable id',
+    drive_id VARCHAR(128) NOT NULL COMMENT 'wps drive id',
+    folder_id VARCHAR(128) NOT NULL COMMENT 'wps folder id',
+    folder_name VARCHAR(160) NOT NULL COMMENT 'wps folder name',
+    created_at DATETIME(3) NOT NULL COMMENT 'created time',
+    updated_at DATETIME(3) NOT NULL COMMENT 'updated time',
+    PRIMARY KEY (business_system_id, drive_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='app preview wps folder mapping';

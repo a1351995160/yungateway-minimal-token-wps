@@ -10,6 +10,9 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
@@ -58,7 +61,7 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
     @Override
     public WpsAppToken issueAppToken() {
-        WpsAppTokenResponse response = WpsClientSupport.executeWithRetry(
+        WpsOauthTokenResponse response = WpsClientSupport.executeWithRetry(
                 properties,
                 this::executeAppTokenOnce);
         return toAppToken(response);
@@ -73,12 +76,12 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
                 WpsPreviewResponse.class).getBody();
     }
 
-    private WpsAppTokenResponse executeAppTokenOnce() {
+    private WpsOauthTokenResponse executeAppTokenOnce() {
         return restTemplate.exchange(
                 tokenUrl(),
                 HttpMethod.POST,
                 appTokenEntity(),
-                WpsAppTokenResponse.class).getBody();
+                WpsOauthTokenResponse.class).getBody();
     }
 
     private WpsPreviewLink toPreviewLink(WpsPreviewResponse response, WpsPreviewRequest request) {
@@ -89,21 +92,15 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
         return new WpsPreviewLink(data.getPreviewUrl(), expireAt);
     }
 
-    private WpsAppToken toAppToken(WpsAppTokenResponse response) {
-        AppTokenData data = requireAppTokenData(response);
-        OffsetDateTime expireAt = parseExpireAt(data.getExpireAt());
-        return new WpsAppToken(data.getAccessToken(), expireAt);
+    private WpsAppToken toAppToken(WpsOauthTokenResponse response) {
+        WpsOauthTokenResponse data = WpsClientSupport.requireData(response);
+        WpsClientSupport.requireText(data.getAccessToken());
+        return new WpsAppToken(data.getAccessToken(), expiresAt(data.getExpiresIn()));
     }
 
     private PreviewData requirePreviewData(WpsPreviewResponse response) {
         PreviewData data = WpsClientSupport.requireSuccessData(response);
         WpsClientSupport.requireText(data.getPreviewUrl());
-        return data;
-    }
-
-    private AppTokenData requireAppTokenData(WpsAppTokenResponse response) {
-        AppTokenData data = WpsClientSupport.requireSuccessData(response);
-        WpsClientSupport.requireText(data.getAccessToken());
         return data;
     }
 
@@ -120,16 +117,18 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
         return new HttpEntity<>(body, headers);
     }
 
-    private HttpEntity<byte[]> appTokenEntity() {
-        AppTokenPayload payload = new AppTokenPayload(properties.getAppId(), properties.getAppSecret());
-        byte[] body = WpsSignedRequestSupport.jsonBody(payload);
-        HttpHeaders headers = WpsSignedRequestSupport.signedJsonHeaders(
-                properties,
-                signer,
-                HttpMethod.POST.name(),
-                tokenUrl(),
-                body);
-        return new HttpEntity<>(body, headers);
+    private HttpEntity<MultiValueMap<String, String>> appTokenEntity() {
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("grant_type", "client_credentials");
+        body.add("client_id", properties.getAppId());
+        body.add("client_secret", properties.getAppSecret());
+        return new HttpEntity<>(body, formHeaders());
+    }
+
+    private HttpHeaders formHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        return headers;
     }
 
     private String previewUrl() {
@@ -147,6 +146,13 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
         } catch (DateTimeParseException ex) {
             throw WpsClientSupport.upstreamError(ex);
         }
+    }
+
+    private OffsetDateTime expiresAt(Long expiresIn) {
+        if (expiresIn == null || expiresIn.longValue() <= 0L) {
+            throw WpsClientSupport.upstreamError(null);
+        }
+        return OffsetDateTime.now().plusSeconds(expiresIn.longValue());
     }
 
     private void validatePreviewUrl(String previewUrl) {

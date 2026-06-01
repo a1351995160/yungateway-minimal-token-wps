@@ -7,6 +7,7 @@ import com.wps.yundoc.common.context.RequestContext;
 import com.wps.yundoc.common.context.RequestContextHolder;
 import com.wps.yundoc.testsupport.BusinessSystemCredentials;
 import com.wps.yundoc.testsupport.BusinessSystemFixture;
+import com.wps.yundoc.testsupport.UserAssertionSigner;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -51,7 +52,7 @@ class JwtAuthenticationFilterTest {
     void buildsRequestContextBeforeCapabilityController() throws IOException {
         BusinessSystemCredentials credentials =
                 businessSystemFixture.enabled("biz-filter-ok", "user-files:list");
-        String token = accessToken(credentials);
+        String token = userAccessToken(credentials, "user-filter-ok");
 
         ResponseEntity<String> response = restTemplate.exchange(
                 url("/api/v1/test/capability"),
@@ -69,7 +70,7 @@ class JwtAuthenticationFilterTest {
     void rejectsCapabilityRequestWithoutPermission() {
         BusinessSystemCredentials credentials =
                 businessSystemFixture.enabled("biz-filter-denied", "app-preview:create");
-        String token = accessToken(credentials);
+        String token = userAccessToken(credentials, "user-filter-denied");
 
         ResponseEntity<String> response = restTemplate.exchange(
                 url("/api/v1/test/capability"),
@@ -80,12 +81,42 @@ class JwtAuthenticationFilterTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
-    private String accessToken(BusinessSystemCredentials credentials) {
+    @Test
+    void rejectsAppJwtOnUserCapabilityRoute() {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-filter-app-on-user", "user-files:list");
+        String token = appAccessToken(credentials);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url("/api/v1/test/capability"),
+                HttpMethod.GET,
+                authorized(token),
+                String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    private String appAccessToken(BusinessSystemCredentials credentials) {
         String body = "{\"clientId\":\"" + credentials.getClientId()
                 + "\",\"clientSecret\":\"" + credentials.getClientSecret() + "\"}";
+        return tokenFromBody(body);
+    }
+
+    private String userAccessToken(BusinessSystemCredentials credentials, String userId) {
+        String body = "{\"clientId\":\"" + credentials.getClientId()
+                + "\",\"clientSecret\":\"" + credentials.getClientSecret()
+                + "\",\"identityType\":\"USER\",\"userId\":\"" + userId + "\"}";
+        return tokenFromBody(signedJsonEntity(body, credentials, userId));
+    }
+
+    private String tokenFromBody(String body) {
+        return tokenFromBody(jsonEntity(body));
+    }
+
+    private String tokenFromBody(HttpEntity<String> entity) {
         ResponseEntity<String> response = restTemplate.postForEntity(
                 url("/api/v1/auth/token"),
-                jsonEntity(body),
+                entity,
                 String.class);
         return readAccessToken(response);
     }
@@ -109,6 +140,16 @@ class JwtAuthenticationFilterTest {
     private HttpEntity<String> jsonEntity(String body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        return new HttpEntity<>(body, headers);
+    }
+
+    private HttpEntity<String> signedJsonEntity(
+            String body,
+            BusinessSystemCredentials credentials,
+            String userId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        UserAssertionSigner.sign(headers, credentials, "POST", "/api/v1/auth/token", "", userId);
         return new HttpEntity<>(body, headers);
     }
 

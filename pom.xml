@@ -27,6 +27,7 @@
         <maven.pmd.plugin.version>3.11.0</maven.pmd.plugin.version>
         <p3c.pmd.version>2.1.1</p3c.pmd.version>
         <spotbugs.maven.plugin.version>4.8.6.5</spotbugs.maven.plugin.version>
+        <jacoco.maven.plugin.version>0.8.11</jacoco.maven.plugin.version>
     </properties>
 
     <dependencies>
@@ -123,6 +124,25 @@
                         <version>${p3c.pmd.version}</version>
                     </dependency>
                 </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.maven.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>com.github.spotbugs</groupId>

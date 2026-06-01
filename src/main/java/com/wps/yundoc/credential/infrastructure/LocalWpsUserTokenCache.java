@@ -38,12 +38,20 @@ public class LocalWpsUserTokenCache {
         evictOverflow();
     }
 
+    public void remove(String userId) {
+        tokens.remove(userId);
+    }
+
+    public void remove(String userId, WpsUserToken token) {
+        tokens.remove(userId, token);
+    }
+
     int size() {
         return tokens.size();
     }
 
     private Optional<WpsUserToken> validToken(String userId, WpsUserToken token) {
-        if (shouldRefresh(token)) {
+        if (shouldRemove(token)) {
             tokens.remove(userId, token);
             return Optional.empty();
         }
@@ -62,9 +70,18 @@ public class LocalWpsUserTokenCache {
     }
 
     private void evictExpiredToken(Map.Entry<String, WpsUserToken> entry) {
-        if (shouldRefresh(entry.getValue())) {
+        if (shouldRemove(entry.getValue())) {
             tokens.remove(entry.getKey(), entry.getValue());
         }
+    }
+
+    private boolean shouldRemove(WpsUserToken token) {
+        if (!shouldRefresh(token)) {
+            return false;
+        }
+        return token.getRefreshToken() == null
+                || token.getRefreshExpiresAt() == null
+                || !token.getRefreshExpiresAt().isAfter(OffsetDateTime.now());
     }
 
     private void evictOverflow() {

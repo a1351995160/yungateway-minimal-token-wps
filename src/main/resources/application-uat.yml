@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${UAT_MYSQL_HOST}:${UAT_MYSQL_PORT:3306}/${UAT_MYSQL_DATABASE:yundoc_uat}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${UAT_MYSQL_USERNAME}
+    password: ${UAT_MYSQL_PASSWORD}
+
+server:
+  port: ${UAT_SERVER_PORT:${SERVER_PORT:8080}}
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+yundoc:
+  readiness:
+    tdsql-required: true
+  client-secret:
+    pepper: ${YUNDOC_UAT_CLIENT_SECRET_PEPPER}
+    algorithm: HMAC-SHA256
+  jwt:
+    issuer: yundoc-gateway-uat
+    audience: yundoc-business-systems-uat
+    secret: ${YUNDOC_UAT_BUSINESS_JWT_SECRET}
+    ttl: ${YUNDOC_UAT_BUSINESS_JWT_TTL:30m}
+  wps-client:
+    base-url: ${WPS_UAT_BASE_URL}
+    redirect-uri: ${WPS_UAT_REDIRECT_URI}
+    oauth-scope: ${WPS_UAT_OAUTH_SCOPE:files.read}
+    app-id: ${WPS_UAT_APP_ID}
+    app-secret: ${WPS_UAT_APP_SECRET}
+    connect-timeout: ${WPS_UAT_CONNECT_TIMEOUT:2s}
+    read-timeout: ${WPS_UAT_READ_TIMEOUT:5s}
+    max-retries: ${WPS_UAT_MAX_RETRIES:1}
+  wps-credential:
+    refresh-skew: ${WPS_UAT_REFRESH_SKEW:5m}
+  wps-user-authorization:
+    refresh-skew: ${WPS_UAT_REFRESH_SKEW:5m}
+    state-ttl: ${WPS_UAT_STATE_TTL:5m}

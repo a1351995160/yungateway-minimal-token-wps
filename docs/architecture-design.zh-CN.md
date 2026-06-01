@@ -38,7 +38,7 @@ flowchart LR
 | `CapabilityRoutePolicy` | 将 HTTP method + path 映射为 API code。 |
 | `AuthTokenService` | 校验业务系统凭证，签发内部 JWT。 |
 | `BusinessSystemApiPermissionService` | 校验业务系统状态、token 版本、权限版本和 API 权限。 |
-| `UserAssertionVerifier` | USER 模式下校验业务方对 `userId` 的签名断言。 |
+| `UserAssertionVerifier` | 历史兼容组件；新 USER 主链路不再要求每次请求携带用户断言签名。 |
 | `WpsCredentialService` | 获取和缓存 WPS app token。 |
 | `WpsUserAuthorizationService` | 管理 WPS USER OAuth state 和 user token。 |
 | `WpsHttpClient` | 创建预览链接和获取 WPS app token。 |
@@ -54,6 +54,8 @@ flowchart LR
 | `requestId` | `X-Request-Id` 或服务端生成 | 日志、响应和排障关联。 |
 | `businessSystemId` | JWT claim | 业务系统身份。 |
 | `clientId` | JWT claim | 调用方 client。 |
+| `identityType` | JWT claim | 当前 token 是 APP 还是 USER，用于路由身份校验。 |
+| `userId` | USER JWT claim | USER 接口的当前操作用户。APP JWT 不携带该字段。 |
 | `jti` | JWT claim | JWT 唯一标识。 |
 | `tokenVersion` | JWT claim + 数据库 | token 失效控制。 |
 | `permissionVersion` | JWT claim + 数据库 | 权限变更后旧 token 失效控制。 |
@@ -71,7 +73,7 @@ flowchart LR
 - `LocalWpsTokenCache`：WPS app token。
 - `LocalWpsUserTokenCache`：WPS user token，以 `userId` 维度缓存。
 - `LocalOauthStateCache`：WPS USER 授权 state。
-- `UserAssertionNonceCache`：USER 断言 nonce 防重放。
+- `UserAssertionNonceCache`：历史用户断言 nonce 缓存，新 USER 主链路不再依赖。
 
 生产多实例时，内存缓存需要替换为 Redis 或数据库。
 

@@ -1,6 +1,13 @@
 spring:
   application:
     name: wps-yundoc-capability-gateway
+  servlet:
+    multipart:
+      max-file-size: ${APP_PREVIEW_MAX_FILE_SIZE:50MB}
+      max-request-size: ${APP_PREVIEW_MAX_FILE_SIZE:50MB}
+
+server:
+  port: ${SERVER_PORT:8080}
 
 mybatis:
   mapper-locations: classpath*:mapper/**/*.xml
@@ -33,12 +40,38 @@ yundoc:
     tdsql-required: true
   wps-client:
     preview-path: /api/preview-links
-    token-path: /oauth/token
+    token-path: /oauth2/token
     file-list-path: /api/user/files
-    authorize-path: /oauth/authorize
-    user-token-path: /oauth/user-token
+    drive-list-path: /v7/drives
+    drive-create-path: /v7/drives/create
+    file-children-path-template: /v7/drives/{driveId}/files/{parentId}/children
+    file-create-path-template: /v7/drives/{driveId}/files/{parentId}/create
+    request-upload-path-template: /v7/drives/{driveId}/files/{parentId}/request_upload
+    commit-upload-path-template: /v7/drives/{driveId}/files/{parentId}/commit_upload
+    authorize-path: /oauth2/auth
+    user-token-path: /oauth2/token
     signature-version: KSO-1
+    upload-url-allowed-host-suffixes:
+      - wps.cn
+      - kdocs.cn
+      - wps365.com
+  app-preview-upload:
+    max-file-size-bytes: ${APP_PREVIEW_MAX_FILE_SIZE_BYTES:52428800}
+    max-file-name-length: ${APP_PREVIEW_MAX_FILE_NAME_LENGTH:128}
+    temp-directory: ${APP_PREVIEW_TEMP_DIRECTORY:}
+    drive-id: ${APP_PREVIEW_WPS_DRIVE_ID:}
+    drive-name: ${APP_PREVIEW_WPS_DRIVE_NAME:YunDoc Preview}
+    drive-source: ${APP_PREVIEW_WPS_DRIVE_SOURCE:yundoc}
+    auto-create-drive: ${APP_PREVIEW_AUTO_CREATE_DRIVE:false}
+    root-parent-id: ${APP_PREVIEW_ROOT_PARENT_ID:0}
+    folder-name-prefix: ${APP_PREVIEW_FOLDER_NAME_PREFIX:yundoc-preview-}
+    drive-page-size: ${APP_PREVIEW_DRIVE_PAGE_SIZE:100}
+    file-list-page-size: ${APP_PREVIEW_FILE_LIST_PAGE_SIZE:100}
+    upload-internal: ${APP_PREVIEW_UPLOAD_INTERNAL:false}
+    upload-conflict-behavior: ${APP_PREVIEW_UPLOAD_CONFLICT_BEHAVIOR:rename}
+    folder-conflict-behavior: ${APP_PREVIEW_FOLDER_CONFLICT_BEHAVIOR:fail}
   wps-credential:
     max-user-token-count: 10000
   wps-user-authorization:
+    refresh-skew: 5m
     max-state-count: 10000

@@ -4,13 +4,16 @@ import com.wps.yundoc.capability.apppreview.application.AppPreviewCommand;
 import com.wps.yundoc.capability.apppreview.application.AppPreviewResult;
 import com.wps.yundoc.capability.apppreview.application.AppPreviewService;
 import com.wps.yundoc.common.api.ApiResponse;
+import com.wps.yundoc.common.context.RequestContext;
 import com.wps.yundoc.common.context.RequestContextHolder;
+import com.wps.yundoc.common.error.YundocErrorCode;
+import com.wps.yundoc.common.error.YundocException;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.validation.Valid;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * AppPreviewController component.
@@ -27,16 +30,26 @@ public class AppPreviewController {
         this.appPreviewService = appPreviewService;
     }
 
-    @PostMapping("/previews")
-    public ApiResponse<AppPreviewResponse> createPreview(@Valid @RequestBody AppPreviewRequest request) {
-        AppPreviewResult result = appPreviewService.createPreview(command(request));
+    @PostMapping(value = "/previews", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<AppPreviewResponse> createPreview(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "displayName", required = false) String displayName,
+            @RequestParam(value = "expireSeconds", required = false, defaultValue = "3600") int expireSeconds) {
+        AppPreviewResult result = appPreviewService.createPreview(command(file, displayName, expireSeconds));
         String requestId = RequestContextHolder.currentRequestId().orElse("unknown");
         return ApiResponse.success(new AppPreviewResponse(result), requestId);
     }
 
-    private AppPreviewCommand command(AppPreviewRequest request) {
-        AppPreviewRequest.Source source = request.getSource();
-        AppPreviewRequest.Options options = request.getOptions();
-        return new AppPreviewCommand(source.getType(), source.getFileId(), options.getExpireSeconds());
+    private AppPreviewCommand command(MultipartFile file, String displayName, int expireSeconds) {
+        return new AppPreviewCommand(
+                requestContext().getBusinessSystemId(),
+                file,
+                displayName,
+                expireSeconds);
+    }
+
+    private RequestContext requestContext() {
+        return RequestContextHolder.current()
+                .orElseThrow(() -> new YundocException(YundocErrorCode.TOKEN_INVALID));
     }
 }

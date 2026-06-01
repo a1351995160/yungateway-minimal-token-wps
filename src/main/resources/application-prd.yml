@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${PRD_MYSQL_HOST}:${PRD_MYSQL_PORT:3306}/${PRD_MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=false
+    username: ${PRD_MYSQL_USERNAME}
+    password: ${PRD_MYSQL_PASSWORD}
+
+server:
+  port: ${PRD_SERVER_PORT:${SERVER_PORT:8080}}
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+yundoc:
+  readiness:
+    tdsql-required: true
+  client-secret:
+    pepper: ${YUNDOC_PRD_CLIENT_SECRET_PEPPER}
+    algorithm: HMAC-SHA256
+  jwt:
+    issuer: ${YUNDOC_PRD_JWT_ISSUER:yundoc-gateway-prd}
+    audience: ${YUNDOC_PRD_JWT_AUDIENCE:yundoc-business-systems-prd}
+    secret: ${YUNDOC_PRD_BUSINESS_JWT_SECRET}
+    ttl: ${YUNDOC_PRD_BUSINESS_JWT_TTL:30m}
+  wps-client:
+    base-url: ${WPS_PRD_BASE_URL}
+    redirect-uri: ${WPS_PRD_REDIRECT_URI}
+    oauth-scope: ${WPS_PRD_OAUTH_SCOPE:files.read}
+    app-id: ${WPS_PRD_APP_ID}
+    app-secret: ${WPS_PRD_APP_SECRET}
+    connect-timeout: ${WPS_PRD_CONNECT_TIMEOUT:2s}
+    read-timeout: ${WPS_PRD_READ_TIMEOUT:5s}
+    max-retries: ${WPS_PRD_MAX_RETRIES:1}
+  wps-credential:
+    refresh-skew: ${WPS_PRD_REFRESH_SKEW:5m}
+  wps-user-authorization:
+    refresh-skew: ${WPS_PRD_REFRESH_SKEW:5m}
+    state-ttl: ${WPS_PRD_STATE_TTL:5m}

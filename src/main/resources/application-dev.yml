@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DEV_MYSQL_HOST}:${DEV_MYSQL_PORT:3306}/${DEV_MYSQL_DATABASE:yundoc_dev}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DEV_MYSQL_USERNAME}
+    password: ${DEV_MYSQL_PASSWORD}
+
+server:
+  port: ${DEV_SERVER_PORT:${SERVER_PORT:8080}}
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+yundoc:
+  readiness:
+    tdsql-required: true
+  client-secret:
+    pepper: ${YUNDOC_DEV_CLIENT_SECRET_PEPPER}
+    algorithm: HMAC-SHA256
+  jwt:
+    issuer: yundoc-gateway-dev
+    audience: yundoc-business-systems-dev
+    secret: ${YUNDOC_DEV_BUSINESS_JWT_SECRET}
+    ttl: ${YUNDOC_DEV_BUSINESS_JWT_TTL:30m}
+  wps-client:
+    base-url: ${WPS_DEV_BASE_URL}
+    redirect-uri: ${WPS_DEV_REDIRECT_URI}
+    oauth-scope: ${WPS_DEV_OAUTH_SCOPE:files.read}
+    app-id: ${WPS_DEV_APP_ID}
+    app-secret: ${WPS_DEV_APP_SECRET}
+    connect-timeout: ${WPS_DEV_CONNECT_TIMEOUT:2s}
+    read-timeout: ${WPS_DEV_READ_TIMEOUT:5s}
+    max-retries: ${WPS_DEV_MAX_RETRIES:1}
+  wps-credential:
+    refresh-skew: ${WPS_DEV_REFRESH_SKEW:5m}
+  wps-user-authorization:
+    refresh-skew: ${WPS_DEV_REFRESH_SKEW:5m}
+    state-ttl: ${WPS_DEV_STATE_TTL:5m}

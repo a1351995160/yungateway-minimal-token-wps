@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -38,7 +40,9 @@ public class GlobalExceptionHandler {
             BindException.class,
             ConstraintViolationException.class,
             HttpMessageNotReadableException.class,
-            HttpMediaTypeNotSupportedException.class
+            HttpMediaTypeNotSupportedException.class,
+            MissingServletRequestPartException.class,
+            MaxUploadSizeExceededException.class
     })
     public ResponseEntity<ApiResponse<Void>> handleValidationException(Exception exception) {
         ErrorResponse error = ErrorResponse.of(

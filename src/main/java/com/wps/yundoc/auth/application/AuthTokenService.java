@@ -1,12 +1,14 @@
 package com.wps.yundoc.auth.application;
 
 import com.wps.yundoc.auth.domain.BusinessSystemPrincipal;
+import com.wps.yundoc.businesssystem.domain.WpsIdentityType;
 import com.wps.yundoc.businesssystem.infrastructure.BizSystemApiPermissionMapper;
 import com.wps.yundoc.businesssystem.infrastructure.BizSystemApiPermissionPO;
 import com.wps.yundoc.businesssystem.infrastructure.BizSystemMapper;
 import com.wps.yundoc.businesssystem.infrastructure.BizSystemPO;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -40,10 +42,14 @@ public class AuthTokenService {
     }
 
     public AuthToken issueToken(String clientId, String clientSecret) {
+        return issueToken(clientId, clientSecret, null, null);
+    }
+
+    public AuthToken issueToken(String clientId, String clientSecret, String identityTypeValue, String userId) {
         BizSystemPO bizSystem = requireByClientId(clientId);
         requireEnabled(bizSystem);
         requireSecretMatch(clientSecret, bizSystem);
-        BusinessSystemPrincipal principal = principal(bizSystem);
+        BusinessSystemPrincipal principal = principal(bizSystem, identityType(identityTypeValue), userId);
         List<String> apiPermissions = apiPermissions(bizSystem.getBusinessSystemId());
         long expiresIn = jwtTtlSeconds(bizSystem);
         return new AuthToken(
@@ -78,13 +84,37 @@ public class AuthTokenService {
         }
     }
 
-    private BusinessSystemPrincipal principal(BizSystemPO bizSystem) {
-        return new BusinessSystemPrincipal(
-                bizSystem.getBusinessSystemId(),
-                bizSystem.getClientId(),
-                UUID.randomUUID().toString(),
-                bizSystem.getTokenVersion(),
-                bizSystem.getPermissionVersion());
+    private WpsIdentityType identityType(String value) {
+        if (!Texts.hasText(value)) {
+            return WpsIdentityType.APP;
+        }
+        try {
+            return WpsIdentityType.valueOf(value.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new YundocException(YundocErrorCode.VALIDATION_FAILED);
+        }
+    }
+
+    private BusinessSystemPrincipal principal(BizSystemPO bizSystem, WpsIdentityType identityType, String userId) {
+        return BusinessSystemPrincipal.builder()
+                .businessSystemId(bizSystem.getBusinessSystemId())
+                .clientId(bizSystem.getClientId())
+                .identityType(identityType)
+                .userId(principalUserId(identityType, userId))
+                .jti(UUID.randomUUID().toString())
+                .tokenVersion(bizSystem.getTokenVersion())
+                .permissionVersion(bizSystem.getPermissionVersion())
+                .build();
+    }
+
+    private String principalUserId(WpsIdentityType identityType, String userId) {
+        if (identityType == WpsIdentityType.APP) {
+            return null;
+        }
+        if (Texts.hasText(userId)) {
+            return userId.trim();
+        }
+        throw new YundocException(YundocErrorCode.USER_ID_REQUIRED);
     }
 
     private List<String> apiPermissions(String businessSystemId) {

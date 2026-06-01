@@ -16,11 +16,15 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -46,13 +50,14 @@ class MvpSmokeTest {
                 "biz-mvp-smoke",
                 "app-preview:create",
                 "user-files:list");
-        String accessToken = accessToken(credentials);
+        String appAccessToken = appAccessToken(credentials);
+        String userAccessToken = userAccessToken(credentials, "smoke-user");
 
-        JsonNode preview = postAppPreview(accessToken);
-        JsonNode reauth = getUserFiles(credentials, accessToken, HttpStatus.UNAUTHORIZED);
+        JsonNode preview = postAppPreview(appAccessToken);
+        JsonNode reauth = getUserFiles(userAccessToken, HttpStatus.UNAUTHORIZED);
         String state = stateFromAuthorizeUrl(reauth);
         callback(state);
-        JsonNode files = getUserFiles(credentials, accessToken, HttpStatus.OK);
+        JsonNode files = getUserFiles(userAccessToken, HttpStatus.OK);
 
         assertThat(preview.path("data").path("previewUrl").asText()).startsWith("https://preview.test/files/");
         assertThat(preview.path("data").path("expireAt").asText()).isNotBlank();
@@ -62,7 +67,7 @@ class MvpSmokeTest {
         assertThat(files.path("data").path("items").get(0).path("fileId").asText()).isNotBlank();
     }
 
-    private String accessToken(BusinessSystemCredentials credentials) throws IOException {
+    private String appAccessToken(BusinessSystemCredentials credentials) throws IOException {
         ResponseEntity<String> response = restTemplate.postForEntity(
                 url("/api/v1/auth/token"),
                 jsonEntity("{\"clientId\":\"" + credentials.getClientId()
@@ -72,24 +77,32 @@ class MvpSmokeTest {
         return body(response).path("data").path("accessToken").asText();
     }
 
+    private String userAccessToken(BusinessSystemCredentials credentials, String userId) throws IOException {
+        String body = "{\"clientId\":\"" + credentials.getClientId()
+                + "\",\"clientSecret\":\"" + credentials.getClientSecret()
+                + "\",\"identityType\":\"USER\",\"userId\":\"" + userId + "\"}";
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                url("/api/v1/auth/token"),
+                signedJsonEntity(body, credentials, userId),
+                String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return body(response).path("data").path("accessToken").asText();
+    }
+
     private JsonNode postAppPreview(String accessToken) throws IOException {
         ResponseEntity<String> response = restTemplate.postForEntity(
                 url("/api/v1/app/previews"),
-                bearer(accessToken, previewJson("wps-file-001")),
+                multipartBearer(accessToken),
                 String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         return body(response);
     }
 
-    private JsonNode getUserFiles(
-            BusinessSystemCredentials credentials,
-            String accessToken,
-            HttpStatus expectedStatus) throws IOException {
-        String queryString = "userId=smoke-user";
+    private JsonNode getUserFiles(String accessToken, HttpStatus expectedStatus) throws IOException {
         ResponseEntity<String> response = restTemplate.exchange(
-                url("/api/v1/user/files?" + queryString),
+                url("/api/v1/user/files"),
                 HttpMethod.GET,
-                bearer(credentials, accessToken, "GET", "/api/v1/user/files", queryString, "smoke-user"),
+                bearer(accessToken),
                 String.class);
         assertThat(response.getStatusCode()).isEqualTo(expectedStatus);
         return body(response);
@@ -107,32 +120,45 @@ class MvpSmokeTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
-    private String previewJson(String fileId) {
-        return "{\"source\":{\"type\":\"WPS_FILE\",\"fileId\":\"" + fileId
-                + "\"},\"options\":{\"expireSeconds\":3600}}";
-    }
-
-    private HttpEntity<String> bearer(String accessToken, String body) {
+    private HttpEntity<String> bearer(String accessToken) {
         HttpHeaders headers = jsonHeaders();
         headers.setBearerAuth(accessToken);
+        return new HttpEntity<>(headers);
+    }
+
+    private HttpEntity<MultiValueMap<String, Object>> multipartBearer(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setBearerAuth(accessToken);
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", filePart());
+        body.add("expireSeconds", "3600");
         return new HttpEntity<>(body, headers);
     }
 
-    private HttpEntity<String> bearer(
-            BusinessSystemCredentials credentials,
-            String accessToken,
-            String method,
-            String path,
-            String queryString,
-            String userId) {
-        HttpHeaders headers = jsonHeaders();
-        headers.setBearerAuth(accessToken);
-        UserAssertionSigner.sign(headers, credentials, method, path, queryString, userId);
-        return new HttpEntity<>(headers);
+    private HttpEntity<ByteArrayResource> filePart() {
+        ByteArrayResource resource = new ByteArrayResource("preview-content".getBytes(StandardCharsets.UTF_8)) {
+            @Override
+            public String getFilename() {
+                return "smoke.docx";
+            }
+        };
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        return new HttpEntity<>(resource, headers);
     }
 
     private HttpEntity<String> jsonEntity(String body) {
         return new HttpEntity<>(body, jsonHeaders());
+    }
+
+    private HttpEntity<String> signedJsonEntity(
+            String body,
+            BusinessSystemCredentials credentials,
+            String userId) {
+        HttpHeaders headers = jsonHeaders();
+        UserAssertionSigner.sign(headers, credentials, "POST", "/api/v1/auth/token", "", userId);
+        return new HttpEntity<>(body, headers);
     }
 
     private HttpHeaders jsonHeaders() {

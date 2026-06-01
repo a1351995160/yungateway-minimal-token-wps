@@ -11,10 +11,12 @@ public class AppPreviewResponse {
 
     private final String previewUrl;
     private final String expireAt;
+    private final String fileId;
 
     public AppPreviewResponse(AppPreviewResult result) {
         this.previewUrl = result.getPreviewUrl();
         this.expireAt = result.getExpireAt().toString();
+        this.fileId = result.getFileId();
     }
 
     public String getPreviewUrl() {
@@ -23,5 +25,9 @@ public class AppPreviewResponse {
 
     public String getExpireAt() {
         return expireAt;
+    }
+
+    public String getFileId() {
+        return fileId;
     }
 }

@@ -41,18 +41,19 @@ WPS 云文档接口服务是业务系统访问 WPS OpenAPI 的服务端中转层
 
 ## 主要接口
 
-- 业务系统使用 `clientId + clientSecret` 换取内部 JWT。
-- 服务根据 JWT 中的业务系统身份和数据库权限配置校验接口权限。
-- 文件预览接口使用服务维护的 WPS app token 创建预览链接。
-- 用户文件列表接口通过用户断言签名绑定 `userId`，再使用 WPS user token 访问用户文件列表。
-- 缺少 WPS user token 时返回 `REAUTH_REQUIRED` 和 WPS 授权地址，授权回调后缓存 user token。
+- 业务系统使用 `clientId + clientSecret` 换取 APP JWT，用于文件预览等应用级接口。
+- 业务系统使用 `clientId + clientSecret + identityType=USER + userId` 换取 USER JWT，用于用户授权和用户文件接口。
+- 服务根据 JWT 中的业务系统身份、用户身份类型和数据库权限配置校验接口权限。
+- 文件预览接口接收业务系统上传的文件流，服务使用 WPS app token 上传到 WPS 后创建预览链接。
+- 用户文件列表接口从 USER JWT 读取 `userId`，再使用 WPS user token 访问用户文件列表。
+- 缺少 WPS user token 时返回 `REAUTH_REQUIRED` 和 WPS 授权地址，授权回调后缓存 user token，并在过期前使用 refresh token 刷新。
 
 ## 当前边界
 
-- 持久化表目前只有业务系统和 API 权限配置。
+- 持久化表目前包含业务系统、API 权限配置和 APP 预览业务系统文件夹映射。
 - WPS 系统级 token、WPS 用户 token、OAuth state 当前使用本地内存缓存，生产多实例需要替换为 Redis 或数据库。
-- 文件预览当前实现的是 `WPS_FILE` 类型，也就是业务方传入 WPS 文件 `fileId` 后生成预览链接；直接接收业务方文件流并上传到 WPS 的链路尚未实现。
-- JWT 和用户断言只适合服务端到服务端调用，不应下发给浏览器或移动端。
+- APP 文件预览当前使用 `multipart/form-data` 接收文件流；网关会按业务系统准备 WPS 文件夹，完成 WPS 三段式上传后再创建预览链接。
+- 内部 JWT 只适合服务端到服务端调用，不应下发给浏览器或移动端。
 
 ## Graphify
 
