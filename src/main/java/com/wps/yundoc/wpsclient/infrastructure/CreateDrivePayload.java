@@ -11,8 +11,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class CreateDrivePayload {
 
-    @JsonProperty("allotee_type")
-    private final String alloteeType = "app";
+    private static final String ALLOTEE_TYPE = "app";
+
     private final String name;
     private final String source;
     @JsonProperty("total_quota")
@@ -24,8 +24,9 @@ class CreateDrivePayload {
         this.totalQuota = totalQuota;
     }
 
+    @JsonProperty("allotee_type")
     public String getAlloteeType() {
-        return alloteeType;
+        return ALLOTEE_TYPE;
     }
 
     public String getName() {

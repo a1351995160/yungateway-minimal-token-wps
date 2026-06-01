@@ -306,6 +306,12 @@ class WpsFileClientTest {
         WpsClientProperties properties = new WpsClientProperties();
         properties.setBaseUrl("https://wps.test");
         properties.setFileListPath("/api/user/files");
+        properties.setDriveListPath("/v7/drives");
+        properties.setDriveCreatePath("/v7/drives/create");
+        properties.setFileChildrenPathTemplate("/v7/drives/{driveId}/files/{parentId}/children");
+        properties.setFileCreatePathTemplate("/v7/drives/{driveId}/files/{parentId}/create");
+        properties.setRequestUploadPathTemplate("/v7/drives/{driveId}/files/{parentId}/request_upload");
+        properties.setCommitUploadPathTemplate("/v7/drives/{driveId}/files/{parentId}/commit_upload");
         properties.setAppId("wps-app");
         properties.setAppSecret("wps-secret");
         properties.setUploadUrlAllowedHostSuffixes(Collections.singletonList("wps.test"));

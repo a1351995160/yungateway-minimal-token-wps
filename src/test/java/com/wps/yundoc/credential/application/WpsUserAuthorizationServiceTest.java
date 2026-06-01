@@ -16,6 +16,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -145,7 +146,7 @@ class WpsUserAuthorizationServiceTest {
             if (thread.getState() == Thread.State.BLOCKED) {
                 return;
             }
-            Thread.sleep(10L);
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10L));
         }
         throw new AssertionError("second refresh thread did not block on refresh lock");
     }
