@@ -140,7 +140,7 @@ class WpsUserAuthorizationServiceTest {
         return service.requireUserToken("user-001", "biz-001", "client-001");
     }
 
-    private void waitUntilBlocked(Thread thread) throws InterruptedException {
+    private void waitUntilBlocked(Thread thread) {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
         while (System.nanoTime() < deadline) {
             if (thread.getState() == Thread.State.BLOCKED) {
