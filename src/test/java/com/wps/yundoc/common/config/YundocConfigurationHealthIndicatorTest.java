@@ -76,6 +76,12 @@ class YundocConfigurationHealthIndicatorTest {
         properties.setPreviewPath("/api/preview-links");
         properties.setTokenPath("/oauth2/token");
         properties.setFileListPath("/api/user/files");
+        properties.setDriveListPath("/v7/drives");
+        properties.setDriveCreatePath("/v7/drives/create");
+        properties.setFileChildrenPathTemplate("/v7/drives/{driveId}/files/{parentId}/children");
+        properties.setFileCreatePathTemplate("/v7/drives/{driveId}/files/{parentId}/create");
+        properties.setRequestUploadPathTemplate("/v7/drives/{driveId}/files/{parentId}/request_upload");
+        properties.setCommitUploadPathTemplate("/v7/drives/{driveId}/files/{parentId}/commit_upload");
         properties.setAuthorizePath("/oauth2/auth");
         properties.setUserTokenPath("/oauth2/token");
         properties.setRedirectUri("https://gateway.example.com/api/v1/wps/oauth/callback");

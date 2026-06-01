@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,7 +49,7 @@ class AppPreviewServiceTest {
                 .thenReturn(new WpsUploadInfo("upload-001", new WpsStoreRequest("PUT", "https://wps.test/upload")));
         when(fileClient.commitUpload(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new WpsFileItem("wps-file-001", "demo.docx", "file", false, null));
-        when(previewClient.createPreview(eq(new WpsPreviewRequest("wps-file-001", 3600, "app-token"))))
+        when(previewClient.createPreview(new WpsPreviewRequest("wps-file-001", 3600, "app-token")))
                 .thenReturn(new WpsPreviewLink("https://preview", expireAt));
         AppPreviewWpsUploadService uploadService = new AppPreviewWpsUploadService(
                 previewClient,

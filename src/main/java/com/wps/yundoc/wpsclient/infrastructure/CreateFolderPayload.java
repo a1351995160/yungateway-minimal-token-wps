@@ -9,8 +9,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 class CreateFolderPayload {
 
-    @JsonProperty("file_type")
-    private final String fileType = "folder";
+    private static final String FILE_TYPE = "folder";
+
     private final String name;
     @JsonProperty("on_name_conflict")
     private final String onNameConflict;
@@ -20,8 +20,9 @@ class CreateFolderPayload {
         this.onNameConflict = onNameConflict;
     }
 
+    @JsonProperty("file_type")
     public String getFileType() {
-        return fileType;
+        return FILE_TYPE;
     }
 
     public String getName() {
