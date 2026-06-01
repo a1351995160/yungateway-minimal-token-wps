@@ -27,9 +27,11 @@ class WpsRequestSignerTest {
                 KSO_DATE,
                 new byte[0]);
 
-        assertThat(headers.getValues().get(WpsRequestSigner.KSO_DATE_HEADER)).isEqualTo(KSO_DATE);
-        assertThat(headers.getValues().get(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
-                .isEqualTo("KSO-1 AK123456:ce8df66877175e5198c8ea1362ffddf82e4941c6f25a4ca205a1ad09d0faaf03");
+        assertThat(headers.getValues())
+                .containsEntry(WpsRequestSigner.KSO_DATE_HEADER, KSO_DATE)
+                .containsEntry(
+                        WpsRequestSigner.KSO_AUTHORIZATION_HEADER,
+                        "KSO-1 AK123456:ce8df66877175e5198c8ea1362ffddf82e4941c6f25a4ca205a1ad09d0faaf03");
     }
 
     @Test
@@ -43,8 +45,10 @@ class WpsRequestSignerTest {
                 KSO_DATE,
                 "{\"key\": \"value\"}".getBytes(StandardCharsets.UTF_8));
 
-        assertThat(headers.getValues().get(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
-                .isEqualTo("KSO-1 AK123456:c46e6c988130818ecba2484d51ac685948fbbef6814602c7874d6bfc41dc17b3");
+        assertThat(headers.getValues())
+                .containsEntry(
+                        WpsRequestSigner.KSO_AUTHORIZATION_HEADER,
+                        "KSO-1 AK123456:c46e6c988130818ecba2484d51ac685948fbbef6814602c7874d6bfc41dc17b3");
     }
 
     @Test
@@ -57,11 +61,10 @@ class WpsRequestSignerTest {
                 KSO_DATE,
                 "{\"key\": \"value\"}".getBytes(StandardCharsets.UTF_8));
 
-        assertThat(headers.getValues().get(WpsRequestSigner.WPS3_DATE_HEADER)).isEqualTo(KSO_DATE);
-        assertThat(headers.getValues().get(WpsRequestSigner.WPS3_CONTENT_MD5_HEADER))
-                .isEqualTo("iLrJXzFSjROgcsBfKhzzcQ==");
-        assertThat(headers.getValues().get(WpsRequestSigner.WPS3_AUTHORIZATION_HEADER))
-                .isEqualTo("WPS-3:AK123456:RG+OAFvR9Gd70SnzV59r0WkPmxY=");
+        assertThat(headers.getValues())
+                .containsEntry(WpsRequestSigner.WPS3_DATE_HEADER, KSO_DATE)
+                .containsEntry(WpsRequestSigner.WPS3_CONTENT_MD5_HEADER, "iLrJXzFSjROgcsBfKhzzcQ==")
+                .containsEntry(WpsRequestSigner.WPS3_AUTHORIZATION_HEADER, "WPS-3:AK123456:RG+OAFvR9Gd70SnzV59r0WkPmxY=");
     }
 
     @Test
@@ -71,7 +74,7 @@ class WpsRequestSignerTest {
 
         WpsSignatureHeaders headers = signer.sign(WpsRequestSigner.KSO_1, "GET", "/v7/test", CONTENT_TYPE, new byte[0]);
 
-        assertThat(headers.getValues().get(WpsRequestSigner.KSO_DATE_HEADER))
-                .isEqualTo("Mon, 02 Jan 2006 15:04:05 GMT");
+        assertThat(headers.getValues())
+                .containsEntry(WpsRequestSigner.KSO_DATE_HEADER, "Mon, 02 Jan 2006 15:04:05 GMT");
     }
 }

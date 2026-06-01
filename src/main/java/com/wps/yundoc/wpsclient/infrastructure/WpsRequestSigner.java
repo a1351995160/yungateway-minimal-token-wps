@@ -70,7 +70,7 @@ public class WpsRequestSigner {
             byte[] requestBody) {
         String version = normalizedVersion(signatureVersion);
         if (NONE.equals(version)) {
-            return new WpsSignatureHeaders(new LinkedHashMap<String, String>());
+            return new WpsSignatureHeaders(new LinkedHashMap<>());
         }
         requireCredentials();
         String date = rfc1123Now();
