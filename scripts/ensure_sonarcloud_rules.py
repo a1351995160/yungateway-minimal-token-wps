@@ -59,11 +59,11 @@ def ensure_project_profile(client, organization, project_key, current_profile):
 
     profile = find_profile(client, organization, PROFILE_NAME)
     if profile is None:
-        profile = client.post(
+        profile = profile_from_response(client.post(
             "/api/qualityprofiles/copy",
             fromKey=current_profile["key"],
             toName=PROFILE_NAME,
-        ).get("profile")
+        ))
 
     if profile is None or "key" not in profile:
         raise SystemExit("Unable to create or find SonarCloud Java quality profile '{0}'.".format(PROFILE_NAME))
@@ -77,6 +77,16 @@ def ensure_project_profile(client, organization, project_key, current_profile):
             qualityProfile=profile["name"],
         )
     return profile
+
+
+def profile_from_response(response):
+    if "key" in response and "name" in response:
+        return response
+    for field in ("profile", "qualityProfile"):
+        profile = response.get(field)
+        if isinstance(profile, dict) and "key" in profile and "name" in profile:
+            return profile
+    return None
 
 
 def find_profile(client, organization, profile_name):
