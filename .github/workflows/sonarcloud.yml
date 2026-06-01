@@ -29,12 +29,13 @@ jobs:
           cache: maven
 
       - name: Ensure SonarCloud Java rules
-        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
           SONAR_PROJECT_KEY: a1351995160_yungateway-minimal-token-wps
-        run: python3 scripts/ensure_sonarcloud_rules.py
+        run: |
+          python3 scripts/ensure_sonarcloud_rules.py || \
+            echo "::warning::SONAR_TOKEN cannot manage SonarCloud quality profiles; local PMD and SpotBugs checks remain enforced."
 
       - name: Build, run local static checks, and scan
         env:
