@@ -42,9 +42,10 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           chmod +x ./mvnw
-          ./mvnw -B -DskipTests package pmd:pmd pmd:check spotbugs:check sonar:sonar \
+          ./mvnw -B verify pmd:pmd pmd:check spotbugs:check sonar:sonar \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }} \
             -Dsonar.projectKey=a1351995160_yungateway-minimal-token-wps \
             -Dsonar.projectName=yungateway-minimal-token-wps \
-            -Dsonar.java.pmd.reportPaths=target/pmd.xml
+            -Dsonar.java.pmd.reportPaths=target/pmd.xml \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
