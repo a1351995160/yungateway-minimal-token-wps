@@ -102,7 +102,11 @@ public class AppPreviewFileStagingService {
         }
         String trimmed = fileName.trim();
         validateSafeNamePart(trimmed);
-        return Paths.get(trimmed).getFileName().toString();
+        Path normalized = Paths.get(trimmed).getFileName();
+        if (normalized == null) {
+            throw validationFailed();
+        }
+        return normalized.toString();
     }
 
     private void validateFileName(String fileName) {
