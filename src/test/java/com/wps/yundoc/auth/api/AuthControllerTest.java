@@ -18,13 +18,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -86,10 +86,12 @@ class AuthControllerTest {
     void rejectsWrongClientSecret() throws Exception {
         BusinessSystemCredentials credentials = businessSystemFixture.enabled("biz-token-wrong-secret");
 
-        mockMvc.perform(post("/api/v1/auth/token")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(tokenJson(credentials.getClientId(), "wrong-secret")))
-                .andExpect(status().isUnauthorized());
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED.value());
     }
 
     @Test
@@ -99,11 +101,14 @@ class AuthControllerTest {
         rejectWrongSecret(credentials);
         rejectWrongSecret(credentials);
 
-        mockMvc.perform(post("/api/v1/auth/token")
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(tokenJson(credentials.getClientId(), "wrong-secret")))
-                .andExpect(status().isTooManyRequests())
-                .andExpect(jsonPath("$.error.code").value("RATE_LIMIT_EXCEEDED"));
+                .andReturn();
+
+        JsonNode error = objectMapper.readTree(result.getResponse().getContentAsString()).path("error");
+        assertThat(result.getResponse().getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+        assertThat(error.path("code").asText()).isEqualTo("RATE_LIMIT_EXCEEDED");
     }
 
     @Test

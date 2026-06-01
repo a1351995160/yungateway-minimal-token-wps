@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AuthTokenRateLimiterTest {
@@ -38,7 +39,8 @@ class AuthTokenRateLimiterTest {
         limiter.recordSuccess("client-a");
         limiter.recordFailure("client-a", "10.0.0.1");
 
-        limiter.assertAllowed("client-a", "10.0.0.1");
+        assertThatCode(() -> limiter.assertAllowed("client-a", "10.0.0.1"))
+                .doesNotThrowAnyException();
     }
 
     private AuthTokenRateLimiter limiter(AuthTokenRateLimitProperties properties) {

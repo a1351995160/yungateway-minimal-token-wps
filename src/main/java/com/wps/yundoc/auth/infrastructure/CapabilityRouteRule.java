@@ -3,6 +3,7 @@ package com.wps.yundoc.auth.infrastructure;
 import org.springframework.http.HttpMethod;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Objects;
 
 /**
  * CapabilityRouteRule component.
@@ -25,11 +26,11 @@ class CapabilityRouteRule {
             String suffix,
             RouteMatchType matchType,
             String apiCode) {
-        this.method = method;
-        this.path = path;
+        this.method = Objects.requireNonNull(method, "method must not be null");
+        this.path = Objects.requireNonNull(path, "path must not be null");
         this.suffix = suffix;
-        this.matchType = matchType;
-        this.apiCode = apiCode;
+        this.matchType = Objects.requireNonNull(matchType, "matchType must not be null");
+        this.apiCode = Objects.requireNonNull(apiCode, "apiCode must not be null");
     }
 
     boolean matches(HttpServletRequest request) {
@@ -44,6 +45,9 @@ class CapabilityRouteRule {
     }
 
     private boolean matchesPath(String requestPath) {
+        if (requestPath == null) {
+            return false;
+        }
         String normalizedPath = normalizeTrailingSlash(requestPath);
         if (matchType == RouteMatchType.EXACT) {
             return path.equals(normalizedPath);
@@ -55,6 +59,9 @@ class CapabilityRouteRule {
     }
 
     private boolean matchesSuffixRoute(String requestPath) {
+        if (suffix == null) {
+            return false;
+        }
         if (!requestPath.startsWith(path)) {
             return false;
         }
