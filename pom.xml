@@ -26,6 +26,7 @@
         <archunit.version>1.1.0</archunit.version>
         <maven.pmd.plugin.version>3.11.0</maven.pmd.plugin.version>
         <p3c.pmd.version>2.1.1</p3c.pmd.version>
+        <spotbugs.maven.plugin.version>4.8.6.5</spotbugs.maven.plugin.version>
     </properties>
 
     <dependencies>
@@ -108,7 +109,7 @@
                 <artifactId>maven-pmd-plugin</artifactId>
                 <version>${maven.pmd.plugin.version}</version>
                 <configuration>
-                    <failOnViolation>false</failOnViolation>
+                    <failOnViolation>true</failOnViolation>
                     <linkXRef>false</linkXRef>
                     <printFailingErrors>true</printFailingErrors>
                     <rulesets>
@@ -122,6 +123,17 @@
                         <version>${p3c.pmd.version}</version>
                     </dependency>
                 </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spotbugs.maven.plugin.version}</version>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Low</threshold>
+                    <failOnError>true</failOnError>
+                    <includeFilterFile>config/spotbugs/nullness-include.xml</includeFilterFile>
+                </configuration>
             </plugin>
         </plugins>
     </build>

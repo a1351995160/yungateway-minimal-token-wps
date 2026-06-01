@@ -54,6 +54,8 @@
     <rule ref="category/java/bestpractices.xml/UnusedImports"/>
     <rule ref="category/java/bestpractices.xml/UnusedFormalParameter"/>
     <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+    <rule ref="category/java/bestpractices.xml/JUnitTestsShouldIncludeAssert"
+          message="JUnit tests should include assertions or verifications."/>
     <rule ref="category/java/codestyle.xml/LocalVariableNamingConventions"/>
     <rule ref="category/java/design.xml/AvoidThrowingRawExceptionTypes"/>
 
