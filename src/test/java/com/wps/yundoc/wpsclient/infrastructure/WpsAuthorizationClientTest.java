@@ -44,6 +44,10 @@ class WpsAuthorizationClientTest {
         String body = "{\"code\":0,\"data\":{\"accessToken\":\"user-token\","
                 + "\"expireAt\":\"2026-05-26T18:00:00+08:00\"}}";
         server.expect(once(), requestTo("https://wps.test/oauth/user-token"))
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_DATE_HEADER))
+                        .isNotBlank())
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
+                        .startsWith("KSO-1 wps-app:"))
                 .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
 
         WpsUserToken token = client.exchangeCode("ok-code");
@@ -96,6 +100,7 @@ class WpsAuthorizationClientTest {
         properties.setAuthorizePath("/oauth/authorize");
         properties.setUserTokenPath("/oauth/user-token");
         properties.setAppId("wps-app");
+        properties.setAppSecret("wps-secret");
         properties.setRedirectUri("https://gateway.test/api/v1/wps/oauth/callback");
         properties.setOauthScope("files.read");
         properties.setConnectTimeout(Duration.ofSeconds(1));

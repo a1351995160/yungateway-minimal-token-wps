@@ -6,7 +6,6 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -23,6 +22,7 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
+    private final WpsRequestSigner signer;
 
     public WpsAuthorizationHttpClient(WpsClientProperties properties, RestTemplateBuilder builder) {
         this(properties, builder, WpsClientSupport.restTemplate(properties, builder));
@@ -35,6 +35,7 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
         Objects.requireNonNull(builder, "builder");
         this.properties = properties;
         this.restTemplate = restTemplate;
+        this.signer = WpsRequestSigner.fromProperties(properties);
     }
 
     @Override
@@ -76,15 +77,20 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
         return data;
     }
 
-    private HttpEntity<OauthCodePayload> entity(String code) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    private HttpEntity<byte[]> entity(String code) {
         OauthCodePayload payload = new OauthCodePayload(
                 code,
                 properties.getAppId(),
                 properties.getAppSecret(),
                 properties.getRedirectUri());
-        return new HttpEntity<>(payload, headers);
+        byte[] body = WpsSignedRequestSupport.jsonBody(payload);
+        HttpHeaders headers = WpsSignedRequestSupport.signedJsonHeaders(
+                properties,
+                signer,
+                HttpMethod.POST.name(),
+                userTokenUrl(),
+                body);
+        return new HttpEntity<>(body, headers);
     }
 
     private String baseAuthorizeUrl() {

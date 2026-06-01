@@ -32,6 +32,10 @@ class WpsFileClientTest {
                 + "\"updatedAt\":\"2026-05-26T18:00:00+08:00\"}],\"nextCursor\":\"next\"}}";
         server.expect(once(), requestTo("https://wps.test/api/user/files?parentFileId=root&limit=20"))
                 .andExpect(header("Authorization", "Bearer user-token"))
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_DATE_HEADER))
+                        .isNotBlank())
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
+                        .startsWith("KSO-1 wps-app:"))
                 .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
 
         WpsFileList list = client.listFiles(request());
@@ -97,6 +101,8 @@ class WpsFileClientTest {
         WpsClientProperties properties = new WpsClientProperties();
         properties.setBaseUrl("https://wps.test");
         properties.setFileListPath("/api/user/files");
+        properties.setAppId("wps-app");
+        properties.setAppSecret("wps-secret");
         properties.setConnectTimeout(Duration.ofSeconds(1));
         properties.setReadTimeout(Duration.ofSeconds(1));
         return properties;

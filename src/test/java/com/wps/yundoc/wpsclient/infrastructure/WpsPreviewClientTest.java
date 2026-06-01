@@ -32,6 +32,10 @@ class WpsPreviewClientTest {
         String body = previewBody("https://preview/file", 1800);
         server.expect(once(), requestTo("https://wps.test/api/preview-links"))
                 .andExpect(header("Authorization", "Bearer app-token"))
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_DATE_HEADER))
+                        .isNotBlank())
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
+                        .startsWith("KSO-1 wps-app:"))
                 .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
 
         WpsPreviewLink link = client.createPreview(request());
@@ -121,6 +125,8 @@ class WpsPreviewClientTest {
         WpsHttpClient client = new WpsHttpClient(properties(), new RestTemplateBuilder(), restTemplate);
         String body = "{\"code\":0,\"data\":{\"accessToken\":\"app-token\",\"expireAt\":\"2026-05-26T18:00:00+08:00\"}}";
         server.expect(once(), requestTo("https://wps.test/oauth/token"))
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
+                        .startsWith("KSO-1 wps-app:"))
                 .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
 
         assertThat(client.issueAppToken().getAccessToken()).isEqualTo("app-token");
@@ -157,6 +163,8 @@ class WpsPreviewClientTest {
         properties.setBaseUrl("https://wps.test");
         properties.setPreviewPath("/api/preview-links");
         properties.setTokenPath("/oauth/token");
+        properties.setAppId("wps-app");
+        properties.setAppSecret("wps-secret");
         properties.setPreviewUrlAllowedHosts(Collections.singletonList("preview"));
         properties.setConnectTimeout(Duration.ofSeconds(1));
         properties.setReadTimeout(Duration.ofSeconds(1));

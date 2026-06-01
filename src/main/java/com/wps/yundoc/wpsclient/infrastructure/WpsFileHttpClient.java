@@ -26,6 +26,7 @@ public class WpsFileHttpClient implements WpsFileClient {
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
+    private final WpsRequestSigner signer;
 
     public WpsFileHttpClient(WpsClientProperties properties, RestTemplateBuilder builder) {
         this(properties, builder, WpsClientSupport.restTemplate(properties, builder));
@@ -38,6 +39,7 @@ public class WpsFileHttpClient implements WpsFileClient {
         Objects.requireNonNull(builder, "builder");
         this.properties = properties;
         this.restTemplate = restTemplate;
+        this.signer = WpsRequestSigner.fromProperties(properties);
     }
 
     @Override
@@ -49,10 +51,11 @@ public class WpsFileHttpClient implements WpsFileClient {
     }
 
     private WpsFileListResponse exchange(WpsFileListRequest request) {
+        String url = fileListUrl(request);
         return restTemplate.exchange(
-                fileListUrl(request),
+                url,
                 HttpMethod.GET,
-                entity(request),
+                entity(request, url),
                 WpsFileListResponse.class).getBody();
     }
 
@@ -92,8 +95,13 @@ public class WpsFileHttpClient implements WpsFileClient {
                 item.getUpdatedAt());
     }
 
-    private HttpEntity<Void> entity(WpsFileListRequest request) {
-        HttpHeaders headers = new HttpHeaders();
+    private HttpEntity<Void> entity(WpsFileListRequest request, String url) {
+        HttpHeaders headers = WpsSignedRequestSupport.signedJsonHeaders(
+                properties,
+                signer,
+                HttpMethod.GET.name(),
+                url,
+                new byte[0]);
         headers.setBearerAuth(request.getAccessToken());
         return new HttpEntity<>(headers);
     }

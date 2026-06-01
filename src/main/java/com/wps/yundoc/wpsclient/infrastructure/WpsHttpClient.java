@@ -10,7 +10,6 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
@@ -33,6 +32,7 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
+    private final WpsRequestSigner signer;
 
     public WpsHttpClient(WpsClientProperties properties, RestTemplateBuilder builder) {
         this(properties, builder, WpsClientSupport.restTemplate(properties, builder));
@@ -45,6 +45,7 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
         Objects.requireNonNull(builder, "builder");
         this.properties = properties;
         this.restTemplate = restTemplate;
+        this.signer = WpsRequestSigner.fromProperties(properties);
     }
 
     @Override
@@ -64,7 +65,7 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
     }
 
     private WpsPreviewResponse executePreviewOnce(WpsPreviewRequest request) {
-        HttpEntity<PreviewPayload> entity = previewEntity(request);
+        HttpEntity<byte[]> entity = previewEntity(request);
         return restTemplate.exchange(
                 previewUrl(),
                 HttpMethod.POST,
@@ -106,19 +107,29 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
         return data;
     }
 
-    private HttpEntity<PreviewPayload> previewEntity(WpsPreviewRequest request) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(request.getAccessToken());
+    private HttpEntity<byte[]> previewEntity(WpsPreviewRequest request) {
         PreviewPayload payload = new PreviewPayload(request.getFileId(), request.getExpireSeconds());
-        return new HttpEntity<>(payload, headers);
+        byte[] body = WpsSignedRequestSupport.jsonBody(payload);
+        HttpHeaders headers = WpsSignedRequestSupport.signedJsonHeaders(
+                properties,
+                signer,
+                HttpMethod.POST.name(),
+                previewUrl(),
+                body);
+        headers.setBearerAuth(request.getAccessToken());
+        return new HttpEntity<>(body, headers);
     }
 
-    private HttpEntity<AppTokenPayload> appTokenEntity() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    private HttpEntity<byte[]> appTokenEntity() {
         AppTokenPayload payload = new AppTokenPayload(properties.getAppId(), properties.getAppSecret());
-        return new HttpEntity<>(payload, headers);
+        byte[] body = WpsSignedRequestSupport.jsonBody(payload);
+        HttpHeaders headers = WpsSignedRequestSupport.signedJsonHeaders(
+                properties,
+                signer,
+                HttpMethod.POST.name(),
+                tokenUrl(),
+                body);
+        return new HttpEntity<>(body, headers);
     }
 
     private String previewUrl() {

@@ -37,6 +37,7 @@ yundoc:
     file-list-path: /api/user/files
     authorize-path: /oauth/authorize
     user-token-path: /oauth/user-token
+    signature-version: KSO-1
   wps-credential:
     max-user-token-count: 10000
   wps-user-authorization:

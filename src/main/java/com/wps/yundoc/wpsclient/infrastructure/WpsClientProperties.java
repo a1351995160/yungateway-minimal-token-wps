@@ -24,6 +24,7 @@ public class WpsClientProperties {
     private String oauthScope = "";
     private String appId = "";
     private String appSecret = "";
+    private String signatureVersion = WpsRequestSigner.KSO_1;
     private List<String> previewUrlAllowedHosts = new ArrayList<>();
     private Duration connectTimeout = Duration.ofSeconds(2);
     private Duration readTimeout = Duration.ofSeconds(5);
@@ -107,6 +108,14 @@ public class WpsClientProperties {
 
     public void setAppSecret(String appSecret) {
         this.appSecret = appSecret;
+    }
+
+    public String getSignatureVersion() {
+        return signatureVersion;
+    }
+
+    public void setSignatureVersion(String signatureVersion) {
+        this.signatureVersion = signatureVersion;
     }
 
     public List<String> getPreviewUrlAllowedHosts() {

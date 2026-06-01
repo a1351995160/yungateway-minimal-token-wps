@@ -23,10 +23,27 @@
 | `oauth-scope` | WPS USER 授权 scope。 |
 | `app-id` | WPS app id。 |
 | `app-secret` | WPS app secret。 |
+| `signature-version` | WPS 请求签名版本，默认 `KSO-1`；如目标环境明确不验签可配置为 `NONE`。 |
 | `preview-url-allowed-hosts` | 允许返回给业务系统的预览链接 host 白名单。 |
 | `connect-timeout` | WPS 连接超时。 |
 | `read-timeout` | WPS 读取超时。 |
 | `max-retries` | WPS 调用最大重试次数。 |
+
+## WPS 请求签名
+
+真实 WPS HTTP client 会在发起请求前通过 `WpsRequestSigner` 生成签名头。
+
+KSO-1 签名按 WPS 官方文档实现：
+
+1. `Content-Type` 固定使用实际发送的 `application/json`。
+2. `X-Kso-Date` 使用 RFC1123 GMT 时间。
+3. `RequestURI` 使用 path 加 query，例如 `/v7/users?page_size=20`。
+4. POST 请求先序列化为 JSON 字节，再用同一份字节计算 `sha256(RequestBody)` 并作为请求体发送。
+5. 签名串为 `KSO-1 + Method + RequestURI + ContentType + KsoDate + sha256(RequestBody)`。
+6. 使用 `app-secret` 作为 HMAC-SHA256 密钥，结果转小写 hex。
+7. `X-Kso-Authorization` 格式为 `KSO-1 <app-id>:<signature>`。
+
+`WPS-3` 也封装在同一个 `WpsRequestSigner` 中，便于后续内网兼容旧接口时直接调用 `wps3Sign(...)`。它会生成 `Date`、`Content-Md5` 和 `Authorization: WPS-3:<app-id>:<signature>`。当前真实 WPS HTTP client 默认只使用 KSO-1，因为现有预览和文件列表请求还需要携带 Bearer token。
 
 ## APP token
 
