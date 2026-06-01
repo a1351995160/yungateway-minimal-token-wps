@@ -1,19 +1,20 @@
 # 工程文档总览
 
-本文档集面向开发、测试、运维和安全评审，覆盖 WPS 云文档能力网关从业务目标到代码结构、接口、数据库、安全、测试和部署的主要内容。
+本文档集面向开发、测试、运维和安全评审，覆盖 WPS 云文档接口服务从业务目标到代码结构、接口、数据库、安全、测试和部署的主要内容。
 
 ## 推荐阅读顺序
 
 1. [项目介绍](project-overview.zh-CN.md)
-2. [架构设计](architecture-design.zh-CN.md)
-3. [核心链路](core-flows.zh-CN.md)
-4. [API 契约](api-contract.zh-CN.md)
-5. [WPS 对接流程](wps-integration.zh-CN.md)
-6. [USER 授权流程](user-authorization.zh-CN.md)
-7. [数据库设计](database-design.zh-CN.md)
-8. [安全设计](security-design.zh-CN.md)
-9. [测试与质量](testing-quality.zh-CN.md)
-10. [部署与运维](deployment-operations.zh-CN.md)
+2. [WPS 云文档接口服务 MVP 特性文档](features/wps-yundoc-interface-mvp-feature.zh-CN.md) / [Word 版](features/wps-yundoc-interface-mvp-feature.zh-CN.docx)
+3. [架构设计](architecture-design.zh-CN.md)
+4. [核心链路](core-flows.zh-CN.md)
+5. [API 契约](api-contract.zh-CN.md)
+6. [WPS 对接流程](wps-integration.zh-CN.md)
+7. [用户授权流程](user-authorization.zh-CN.md)
+8. [数据库设计](database-design.zh-CN.md)
+9. [安全设计](security-design.zh-CN.md)
+10. [测试与质量](testing-quality.zh-CN.md)
+11. [部署与运维](deployment-operations.zh-CN.md)
 
 ## 运维手册
 

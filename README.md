@@ -1,6 +1,6 @@
 # WPS Yundoc Capability Gateway
 
-WPS 云文档能力网关是业务系统访问 WPS OpenAPI 的服务端中转层。它负责统一封装 WPS 凭证、业务系统认证、API 权限校验、APP 预览、USER 授权文件列表和基础安全防护，避免业务系统直接接触 WPS `appSecret`、`access_token`、`refresh_token` 等敏感材料。
+WPS 云文档接口服务是业务系统访问 WPS OpenAPI 的服务端中转层。它负责统一封装 WPS 凭证、业务系统认证、接口权限校验、文件预览、用户授权文件列表和基础安全防护，避免业务系统直接接触 WPS `appSecret`、`access_token`、`refresh_token` 等敏感材料。
 
 当前代码是 MVP 后端实现，适合服务端到服务端接入。`local` 和 `test` profile 使用本地 mock WPS client，非 `local/test` profile 使用真实 WPS HTTP client。
 
@@ -25,32 +25,34 @@ WPS 云文档能力网关是业务系统访问 WPS OpenAPI 的服务端中转层
 ## 文档入口
 
 - [工程文档总览](docs/index.zh-CN.md)
+- [WPS 云文档接口服务 MVP 特性文档](docs/features/wps-yundoc-interface-mvp-feature.zh-CN.md)
+- [WPS 云文档接口服务 MVP 特性文档 Word 版](docs/features/wps-yundoc-interface-mvp-feature.zh-CN.docx)
 - [项目介绍](docs/project-overview.zh-CN.md)
 - [架构设计](docs/architecture-design.zh-CN.md)
 - [核心链路](docs/core-flows.zh-CN.md)
 - [API 契约](docs/api-contract.zh-CN.md)
 - [WPS 对接流程](docs/wps-integration.zh-CN.md)
-- [USER 授权流程](docs/user-authorization.zh-CN.md)
+- [用户授权流程](docs/user-authorization.zh-CN.md)
 - [数据库设计](docs/database-design.zh-CN.md)
 - [安全设计](docs/security-design.zh-CN.md)
 - [测试与质量](docs/testing-quality.zh-CN.md)
 - [部署与运维](docs/deployment-operations.zh-CN.md)
 - [代码规范](docs/coding-standards.md)
 
-## 主要能力
+## 主要接口
 
 - 业务系统使用 `clientId + clientSecret` 换取内部 JWT。
-- 网关根据 JWT 中的业务系统身份和数据库权限配置校验 API 能力。
-- APP 模式使用网关维护的 WPS app token 创建预览链接。
-- USER 模式通过用户断言签名绑定 `userId`，再使用 WPS user token 访问用户文件列表。
+- 服务根据 JWT 中的业务系统身份和数据库权限配置校验接口权限。
+- 文件预览接口使用服务维护的 WPS app token 创建预览链接。
+- 用户文件列表接口通过用户断言签名绑定 `userId`，再使用 WPS user token 访问用户文件列表。
 - 缺少 WPS user token 时返回 `REAUTH_REQUIRED` 和 WPS 授权地址，授权回调后缓存 user token。
 
 ## 当前边界
 
 - 持久化表目前只有业务系统和 API 权限配置。
-- APP token、USER token、OAuth state 当前使用本地内存缓存，生产多实例需要替换为 Redis 或数据库。
+- WPS 系统级 token、WPS 用户 token、OAuth state 当前使用本地内存缓存，生产多实例需要替换为 Redis 或数据库。
 - 文件预览当前实现的是 `WPS_FILE` 类型，也就是业务方传入 WPS 文件 `fileId` 后生成预览链接；直接接收业务方文件流并上传到 WPS 的链路尚未实现。
-- JWT 和 USER 断言只适合服务端到服务端调用，不应下发给浏览器或移动端。
+- JWT 和用户断言只适合服务端到服务端调用，不应下发给浏览器或移动端。
 
 ## Graphify
 
