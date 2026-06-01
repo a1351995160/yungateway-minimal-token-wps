@@ -12,6 +12,10 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,6 +37,44 @@ class WpsUserAuthorizationServiceTest {
         assertThat(service.requireUserToken("user-001", "biz-001").getAccessToken()).isEqualTo("user-token");
     }
 
+    @Test
+    void concurrentRefreshDoesNotRemoveTokenRefreshedByFirstRequest() throws Exception {
+        LocalWpsUserTokenCache tokenCache = new LocalWpsUserTokenCache(new WpsCredentialProperties());
+        tokenCache.put("user-001", new WpsUserToken(
+                "old-access",
+                OffsetDateTime.now().plusSeconds(1),
+                "old-refresh",
+                OffsetDateTime.now().plusDays(1),
+                "bearer"));
+        BlockingRefreshAuthorizationClient authorizationClient = new BlockingRefreshAuthorizationClient();
+        WpsUserAuthorizationService service = service(tokenCache, authorizationClient);
+        AtomicReference<WpsUserToken> firstResult = new AtomicReference<>();
+        AtomicReference<WpsUserToken> secondResult = new AtomicReference<>();
+        AtomicReference<Throwable> secondFailure = new AtomicReference<>();
+        Thread first = new Thread(() -> firstResult.set(requireUserToken(service)), "first-refresh");
+        Thread second = new Thread(() -> {
+            try {
+                secondResult.set(requireUserToken(service));
+            } catch (Throwable ex) {
+                secondFailure.set(ex);
+            }
+        }, "second-refresh");
+
+        first.start();
+        authorizationClient.awaitRefreshStarted();
+        second.start();
+        waitUntilBlocked(second);
+        authorizationClient.allowRefresh();
+        first.join(TimeUnit.SECONDS.toMillis(5));
+        second.join(TimeUnit.SECONDS.toMillis(5));
+
+        assertThat(secondFailure.get()).isNull();
+        assertThat(firstResult.get().getAccessToken()).isEqualTo("new-access");
+        assertThat(secondResult.get().getAccessToken()).isEqualTo("new-access");
+        assertThat(authorizationClient.refreshCalls()).isEqualTo(1);
+        assertThat(tokenCache.get("user-001").get().getAccessToken()).isEqualTo("new-access");
+    }
+
     private YundocException reauthRequired(WpsUserAuthorizationService service) {
         try {
             service.requireUserToken("user-001", "biz-001");
@@ -48,10 +90,16 @@ class WpsUserAuthorizationServiceTest {
     }
 
     private WpsUserAuthorizationService service() {
+        return service(new LocalWpsUserTokenCache(new WpsCredentialProperties()), authorizationClient());
+    }
+
+    private WpsUserAuthorizationService service(
+            LocalWpsUserTokenCache tokenCache,
+            WpsAuthorizationClient authorizationClient) {
         return new WpsUserAuthorizationService(
-                new LocalWpsUserTokenCache(new WpsCredentialProperties()),
+                tokenCache,
                 new LocalOauthStateCache(new WpsUserAuthorizationProperties()),
-                authorizationClient(),
+                authorizationClient,
                 new WpsUserAuthorizationProperties());
     }
 
@@ -67,8 +115,97 @@ class WpsUserAuthorizationServiceTest {
                 if (code.trim().isEmpty()) {
                     throw new YundocException(YundocErrorCode.VALIDATION_FAILED);
                 }
-                return new WpsUserToken("user-token", OffsetDateTime.now().plusMinutes(30));
+                return new WpsUserToken(
+                        "user-token",
+                        OffsetDateTime.now().plusMinutes(30),
+                        "refresh-token",
+                        OffsetDateTime.now().plusDays(365),
+                        "bearer");
+            }
+
+            @Override
+            public WpsUserToken refreshToken(String refreshToken) {
+                return new WpsUserToken(
+                        "refreshed-user-token",
+                        OffsetDateTime.now().plusMinutes(30),
+                        "refreshed-refresh-token",
+                        OffsetDateTime.now().plusDays(365),
+                        "bearer");
             }
         };
+    }
+
+    private WpsUserToken requireUserToken(WpsUserAuthorizationService service) {
+        return service.requireUserToken("user-001", "biz-001", "client-001");
+    }
+
+    private void waitUntilBlocked(Thread thread) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+            if (thread.getState() == Thread.State.BLOCKED) {
+                return;
+            }
+            Thread.sleep(10L);
+        }
+        throw new AssertionError("second refresh thread did not block on refresh lock");
+    }
+
+    private static class BlockingRefreshAuthorizationClient implements WpsAuthorizationClient {
+
+        private final CountDownLatch refreshStarted = new CountDownLatch(1);
+        private final CountDownLatch allowRefresh = new CountDownLatch(1);
+        private final AtomicInteger refreshCalls = new AtomicInteger();
+
+        @Override
+        public String authorizeUrl(String state) {
+            return "https://wps.test/oauth/authorize?state=" + state;
+        }
+
+        @Override
+        public WpsUserToken exchangeCode(String code) {
+            return new WpsUserToken(
+                    "user-token",
+                    OffsetDateTime.now().plusMinutes(30),
+                    "refresh-token",
+                    OffsetDateTime.now().plusDays(365),
+                    "bearer");
+        }
+
+        @Override
+        public WpsUserToken refreshToken(String refreshToken) {
+            refreshStarted.countDown();
+            int calls = refreshCalls.incrementAndGet();
+            if (calls > 1) {
+                throw new YundocException(YundocErrorCode.WPS_UPSTREAM_ERROR);
+            }
+            awaitAllowed();
+            return new WpsUserToken(
+                    "new-access",
+                    OffsetDateTime.now().plusMinutes(30),
+                    "new-refresh",
+                    OffsetDateTime.now().plusDays(365),
+                    "bearer");
+        }
+
+        void awaitRefreshStarted() throws InterruptedException {
+            assertThat(refreshStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        }
+
+        void allowRefresh() {
+            allowRefresh.countDown();
+        }
+
+        int refreshCalls() {
+            return refreshCalls.get();
+        }
+
+        private void awaitAllowed() {
+            try {
+                allowRefresh.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("interrupted while waiting to refresh", ex);
+            }
+        }
     }
 }

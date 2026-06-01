@@ -1,5 +1,7 @@
 package com.wps.yundoc.capability.apppreview.application;
 
+import org.springframework.web.multipart.MultipartFile;
+
 /**
  * AppPreviewCommand component.
  *
@@ -7,22 +9,28 @@ package com.wps.yundoc.capability.apppreview.application;
  */
 public class AppPreviewCommand {
 
-    private final String sourceType;
-    private final String fileId;
+    private final String businessSystemId;
+    private final MultipartFile file;
+    private final String displayName;
     private final int expireSeconds;
 
-    public AppPreviewCommand(String sourceType, String fileId, int expireSeconds) {
-        this.sourceType = sourceType;
-        this.fileId = fileId;
+    public AppPreviewCommand(String businessSystemId, MultipartFile file, String displayName, int expireSeconds) {
+        this.businessSystemId = businessSystemId;
+        this.file = file;
+        this.displayName = displayName;
         this.expireSeconds = expireSeconds;
     }
 
-    public String getSourceType() {
-        return sourceType;
+    public String getBusinessSystemId() {
+        return businessSystemId;
     }
 
-    public String getFileId() {
-        return fileId;
+    public MultipartFile getFile() {
+        return file;
+    }
+
+    public String getDisplayName() {
+        return displayName;
     }
 
     public int getExpireSeconds() {

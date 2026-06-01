@@ -147,6 +147,10 @@ final class WpsClientSupport {
 
     private static class NoRedirectSimpleClientHttpRequestFactory extends SimpleClientHttpRequestFactory {
 
+        NoRedirectSimpleClientHttpRequestFactory() {
+            setBufferRequestBody(false);
+        }
+
         @Override
         protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
             super.prepareConnection(connection, httpMethod);

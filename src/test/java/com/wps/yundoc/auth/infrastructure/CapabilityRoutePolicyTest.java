@@ -18,4 +18,26 @@ class CapabilityRoutePolicyTest {
 
         assertThat(policy.resolve(request)).contains("app-preview:create");
     }
+
+    @Test
+    void matchesExactCapabilityRouteWithPathParameters() {
+        CapabilityRoutePolicy policy = new CapabilityRoutePolicy();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET",
+                "/api/v1/wps/oauth/authorize-url;foo=bar");
+        request.setServletPath("/api/v1/wps/oauth/authorize-url;foo=bar");
+
+        assertThat(policy.resolve(request)).contains("user-files:list");
+    }
+
+    @Test
+    void matchesSuffixCapabilityRouteWithPathParameters() {
+        CapabilityRoutePolicy policy = new CapabilityRoutePolicy();
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST",
+                "/api/v1/user/files/file-001;foo=bar/view-url;v=1");
+        request.setServletPath("/api/v1/user/files/file-001;foo=bar/view-url;v=1");
+
+        assertThat(policy.resolve(request)).contains("user-files:view");
+    }
 }

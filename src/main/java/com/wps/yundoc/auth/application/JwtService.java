@@ -3,6 +3,7 @@ package com.wps.yundoc.auth.application;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wps.yundoc.auth.domain.BusinessSystemPrincipal;
+import com.wps.yundoc.businesssystem.domain.WpsIdentityType;
 import com.wps.yundoc.auth.infrastructure.JwtProperties;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
@@ -32,8 +33,10 @@ public class JwtService {
     private static final String ISSUER_CLAIM = "iss";
     private static final String AUDIENCE_CLAIM = "aud";
     private static final String TYPE_CLAIM = "typ";
+    private static final String IDENTITY_TYPE_CLAIM = "identityType";
     private static final String BUSINESS_SYSTEM_ID_CLAIM = "businessSystemId";
     private static final String CLIENT_ID_CLAIM = "clientId";
+    private static final String USER_ID_CLAIM = "userId";
     private static final String TOKEN_VERSION_CLAIM = "tokenVersion";
     private static final String PERMISSION_VERSION_CLAIM = "permissionVersion";
     private static final String JWT_ID_CLAIM = "jti";
@@ -78,8 +81,12 @@ public class JwtService {
         payload.put(ISSUER_CLAIM, properties.getIssuer());
         payload.put(AUDIENCE_CLAIM, properties.getAudience());
         payload.put(TYPE_CLAIM, TOKEN_TYPE);
+        payload.put(IDENTITY_TYPE_CLAIM, principal.getIdentityType().name());
         payload.put(BUSINESS_SYSTEM_ID_CLAIM, principal.getBusinessSystemId());
         payload.put(CLIENT_ID_CLAIM, principal.getClientId());
+        if (principal.getIdentityType() == WpsIdentityType.USER) {
+            payload.put(USER_ID_CLAIM, principal.getUserId());
+        }
         payload.put(TOKEN_VERSION_CLAIM, principal.getTokenVersion());
         payload.put(PERMISSION_VERSION_CLAIM, principal.getPermissionVersion());
         payload.put(JWT_ID_CLAIM, principal.getJti());
@@ -135,12 +142,38 @@ public class JwtService {
     }
 
     private BusinessSystemPrincipal principal(JsonNode payload) {
-        return new BusinessSystemPrincipal(
-                payload.path(BUSINESS_SYSTEM_ID_CLAIM).asText(),
-                payload.path(CLIENT_ID_CLAIM).asText(),
-                payload.path(JWT_ID_CLAIM).asText(),
-                payload.path(TOKEN_VERSION_CLAIM).asInt(),
-                payload.path(PERMISSION_VERSION_CLAIM).asInt());
+        WpsIdentityType identityType = identityType(payload);
+        return BusinessSystemPrincipal.builder()
+                .businessSystemId(payload.path(BUSINESS_SYSTEM_ID_CLAIM).asText())
+                .clientId(payload.path(CLIENT_ID_CLAIM).asText())
+                .identityType(identityType)
+                .userId(userId(payload, identityType))
+                .jti(payload.path(JWT_ID_CLAIM).asText())
+                .tokenVersion(payload.path(TOKEN_VERSION_CLAIM).asInt())
+                .permissionVersion(payload.path(PERMISSION_VERSION_CLAIM).asInt())
+                .build();
+    }
+
+    private WpsIdentityType identityType(JsonNode payload) {
+        if (!payload.hasNonNull(IDENTITY_TYPE_CLAIM)) {
+            return WpsIdentityType.APP;
+        }
+        try {
+            return WpsIdentityType.valueOf(payload.path(IDENTITY_TYPE_CLAIM).asText());
+        } catch (IllegalArgumentException ex) {
+            throw new YundocException(YundocErrorCode.TOKEN_INVALID);
+        }
+    }
+
+    private String userId(JsonNode payload, WpsIdentityType identityType) {
+        if (identityType == WpsIdentityType.APP) {
+            return null;
+        }
+        String userId = payload.path(USER_ID_CLAIM).asText();
+        if (userId.isEmpty()) {
+            throw new YundocException(YundocErrorCode.TOKEN_INVALID);
+        }
+        return userId;
     }
 
     private JsonNode readPayload(String encodedPayload) {

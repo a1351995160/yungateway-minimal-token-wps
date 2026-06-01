@@ -24,4 +24,12 @@ public interface WpsAuthorizationClient {
      * @return WPS user token
      */
     WpsUserToken exchangeCode(String code);
+
+    /**
+     * Refreshes a WPS user token.
+     *
+     * @param refreshToken refresh token
+     * @return refreshed WPS user token
+     */
+    WpsUserToken refreshToken(String refreshToken);
 }

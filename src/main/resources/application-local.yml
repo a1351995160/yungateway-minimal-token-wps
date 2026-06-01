@@ -5,7 +5,17 @@ spring:
     username: ${LOCAL_MYSQL_USERNAME}
     password: ${LOCAL_MYSQL_PASSWORD}
 
+server:
+  port: ${LOCAL_SERVER_PORT:${SERVER_PORT:8080}}
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
 yundoc:
+  readiness:
+    tdsql-required: true
   client-secret:
     pepper: ${YUNDOC_LOCAL_CLIENT_SECRET_PEPPER}
     algorithm: HMAC-SHA256
@@ -13,10 +23,13 @@ yundoc:
     issuer: yundoc-gateway-local
     audience: yundoc-business-systems-local
     secret: ${YUNDOC_LOCAL_BUSINESS_JWT_SECRET}
-    ttl: 30m
+    ttl: ${YUNDOC_LOCAL_BUSINESS_JWT_TTL:30m}
   wps-client:
-    base-url: https://wps.test
-    redirect-uri: http://localhost:8080/api/v1/wps/oauth/callback
-    oauth-scope: files.read
-    app-id: local-wps-app-id
+    base-url: ${WPS_LOCAL_BASE_URL:https://wps.test}
+    redirect-uri: ${WPS_LOCAL_REDIRECT_URI:http://localhost:8080/api/v1/wps/oauth/callback}
+    oauth-scope: ${WPS_LOCAL_OAUTH_SCOPE:files.read}
+    app-id: ${WPS_LOCAL_APP_ID:local-wps-app-id}
     app-secret: ${WPS_LOCAL_APP_SECRET:}
+    connect-timeout: ${WPS_LOCAL_CONNECT_TIMEOUT:2s}
+    read-timeout: ${WPS_LOCAL_READ_TIMEOUT:5s}
+    max-retries: ${WPS_LOCAL_MAX_RETRIES:1}

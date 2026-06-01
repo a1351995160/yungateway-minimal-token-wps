@@ -1,5 +1,7 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 /**
  * FileListItemData component.
  *
@@ -7,10 +9,12 @@ package com.wps.yundoc.wpsclient.infrastructure;
  */
 public class FileListItemData {
 
+    @JsonAlias("id")
     private String fileId;
     private String name;
     private String type;
     private boolean folder;
+    @JsonAlias({"mtime", "updated_at"})
     private String updatedAt;
 
     public String getFileId() {
@@ -38,7 +42,7 @@ public class FileListItemData {
     }
 
     public boolean isFolder() {
-        return folder;
+        return folder || "folder".equals(type);
     }
 
     public void setFolder(boolean folder) {

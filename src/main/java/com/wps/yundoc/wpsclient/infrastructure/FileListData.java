@@ -1,5 +1,7 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 import java.util.List;
 
 /**
@@ -10,6 +12,7 @@ import java.util.List;
 public class FileListData {
 
     private List<FileListItemData> items;
+    @JsonAlias("next_page_token")
     private String nextCursor;
 
     public List<FileListItemData> getItems() {

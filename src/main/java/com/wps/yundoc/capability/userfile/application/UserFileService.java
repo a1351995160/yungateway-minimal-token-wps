@@ -34,7 +34,8 @@ public class UserFileService {
         validateUserId(command.getUserId());
         WpsUserToken token = authorizationService.requireUserToken(
                 command.getUserId(),
-                command.getBusinessSystemId());
+                command.getBusinessSystemId(),
+                command.getClientId());
         WpsFileList fileList = fileClient.listFiles(wpsRequest(command, token));
         return new UserFileListResult(fileList);
     }

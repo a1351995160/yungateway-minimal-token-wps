@@ -32,7 +32,7 @@ public class MockWpsClientConfiguration {
 
     @Bean
     public WpsFileClient mockWpsFileClient() {
-        return mockWpsClient::listFiles;
+        return new MockWpsFileClientAdapter(mockWpsClient);
     }
 
     @Bean
@@ -46,6 +46,11 @@ public class MockWpsClientConfiguration {
             @Override
             public WpsUserToken exchangeCode(String code) {
                 return mockWpsClient.exchangeCode(code);
+            }
+
+            @Override
+            public WpsUserToken refreshToken(String refreshToken) {
+                return mockWpsClient.refreshToken(refreshToken);
             }
         };
     }

@@ -15,10 +15,12 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -50,12 +52,13 @@ class AppPreviewControllerTest {
         ResponseEntity<String> response = restTemplate.exchange(
                 url("/api/v1/app/previews"),
                 HttpMethod.POST,
-                authorized(token, previewJson("wps-file-001")),
+                authorizedMultipart(token, "contract.docx", null, 3600),
                 String.class);
 
         JsonNode data = objectMapper.readTree(response.getBody()).path("data");
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(data.path("previewUrl").asText()).contains("wps-file-001");
+        assertThat(data.path("previewUrl").asText()).contains("mock-uploaded-file");
+        assertThat(data.path("fileId").asText()).isEqualTo("mock-uploaded-file");
         assertThat(data.path("expireAt").asText()).isNotBlank();
     }
 
@@ -67,7 +70,7 @@ class AppPreviewControllerTest {
         ResponseEntity<String> response = restTemplate.exchange(
                 url("/api/v1/app/previews"),
                 HttpMethod.POST,
-                authorized(accessToken(credentials), "{\"source\":{\"type\":\"WPS_FILE\"}}"),
+                authorizedMultipartWithoutFile(accessToken(credentials)),
                 String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -81,7 +84,7 @@ class AppPreviewControllerTest {
         ResponseEntity<String> response = restTemplate.exchange(
                 url("/api/v1/app/previews"),
                 HttpMethod.POST,
-                authorized(accessToken(credentials), previewJson("../secret")),
+                authorizedMultipart(accessToken(credentials), "contract.docx", "../secret.docx", 3600),
                 String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -95,7 +98,7 @@ class AppPreviewControllerTest {
         ResponseEntity<String> response = restTemplate.exchange(
                 url("/api/v1/app/previews"),
                 HttpMethod.POST,
-                authorized(accessToken(credentials), previewJson("wps-file-002")),
+                authorizedMultipart(accessToken(credentials), "contract.docx", null, 3600),
                 String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -103,9 +106,7 @@ class AppPreviewControllerTest {
 
     @Test
     void rejectsTrailingSlashPreviewWithoutAuthorization() throws IOException {
-        int statusCode = postWithoutAuthorization(
-                url("/api/v1/app/previews/"),
-                previewJson("wps-file-trailing"));
+        int statusCode = postWithoutAuthorization(url("/api/v1/app/previews/"));
 
         assertThat(statusCode).isEqualTo(HttpStatus.UNAUTHORIZED.value());
     }
@@ -129,15 +130,55 @@ class AppPreviewControllerTest {
         }
     }
 
-    private String previewJson(String fileId) {
-        return "{\"source\":{\"type\":\"WPS_FILE\",\"fileId\":\"" + fileId
-                + "\"},\"options\":{\"expireSeconds\":3600},\"userId\":\"ignored\"}";
+    private HttpEntity<MultiValueMap<String, Object>> authorizedMultipart(
+            String token,
+            String fileName,
+            String displayName,
+            int expireSeconds) {
+        return multipart(token, fileName, displayName, expireSeconds);
     }
 
-    private HttpEntity<String> authorized(String token, String body) {
-        HttpHeaders headers = jsonHeaders();
-        headers.setBearerAuth(token);
+    private HttpEntity<MultiValueMap<String, Object>> authorizedMultipartWithoutFile(String token) {
+        HttpHeaders headers = multipartHeaders(token);
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("expireSeconds", "3600");
         return new HttpEntity<>(body, headers);
+    }
+
+    private HttpEntity<MultiValueMap<String, Object>> multipart(
+            String token,
+            String fileName,
+            String displayName,
+            int expireSeconds) {
+        HttpHeaders headers = multipartHeaders(token);
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", filePart(fileName));
+        if (displayName != null) {
+            body.add("displayName", displayName);
+        }
+        body.add("expireSeconds", String.valueOf(expireSeconds));
+        return new HttpEntity<>(body, headers);
+    }
+
+    private HttpHeaders multipartHeaders(String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        if (token != null) {
+            headers.setBearerAuth(token);
+        }
+        return headers;
+    }
+
+    private HttpEntity<ByteArrayResource> filePart(String fileName) {
+        ByteArrayResource resource = new ByteArrayResource("preview-content".getBytes(StandardCharsets.UTF_8)) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        };
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        return new HttpEntity<>(resource, headers);
     }
 
     private HttpEntity<String> jsonEntity(String body) {
@@ -154,14 +195,10 @@ class AppPreviewControllerTest {
         return "http://localhost:" + port + path;
     }
 
-    private int postWithoutAuthorization(String targetUrl, String body) throws IOException {
+    private int postWithoutAuthorization(String targetUrl) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(targetUrl).openConnection();
         connection.setRequestMethod("POST");
-        connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
-        connection.setDoOutput(true);
-        try (OutputStream outputStream = connection.getOutputStream()) {
-            outputStream.write(body.getBytes(StandardCharsets.UTF_8));
-        }
+        connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA_VALUE);
         return connection.getResponseCode();
     }
 }

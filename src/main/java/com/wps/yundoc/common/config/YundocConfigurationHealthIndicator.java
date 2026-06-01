@@ -1,5 +1,6 @@
 package com.wps.yundoc.common.config;
 
+import com.wps.yundoc.capability.apppreview.infrastructure.AppPreviewUploadProperties;
 import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.wpsclient.infrastructure.WpsClientProperties;
 import org.springframework.boot.actuate.health.Health;
@@ -20,14 +21,17 @@ public class YundocConfigurationHealthIndicator implements HealthIndicator {
 
     private final YundocReadinessProperties readinessProperties;
     private final WpsClientProperties wpsClientProperties;
+    private final AppPreviewUploadProperties appPreviewUploadProperties;
     private final Environment environment;
 
     public YundocConfigurationHealthIndicator(
             YundocReadinessProperties readinessProperties,
             WpsClientProperties wpsClientProperties,
+            AppPreviewUploadProperties appPreviewUploadProperties,
             Environment environment) {
         this.readinessProperties = readinessProperties;
         this.wpsClientProperties = wpsClientProperties;
+        this.appPreviewUploadProperties = appPreviewUploadProperties;
         this.environment = environment;
     }
 
@@ -59,11 +63,19 @@ public class YundocConfigurationHealthIndicator implements HealthIndicator {
                 || Texts.isBlank(wpsClientProperties.getPreviewPath())
                 || Texts.isBlank(wpsClientProperties.getTokenPath())
                 || Texts.isBlank(wpsClientProperties.getFileListPath())
+                || Texts.isBlank(wpsClientProperties.getDriveListPath())
+                || Texts.isBlank(wpsClientProperties.getDriveCreatePath())
+                || Texts.isBlank(wpsClientProperties.getFileChildrenPathTemplate())
+                || Texts.isBlank(wpsClientProperties.getFileCreatePathTemplate())
+                || Texts.isBlank(wpsClientProperties.getRequestUploadPathTemplate())
+                || Texts.isBlank(wpsClientProperties.getCommitUploadPathTemplate())
                 || Texts.isBlank(wpsClientProperties.getAuthorizePath())
                 || Texts.isBlank(wpsClientProperties.getUserTokenPath())
                 || Texts.isBlank(wpsClientProperties.getRedirectUri())
                 || Texts.isBlank(wpsClientProperties.getOauthScope())
                 || Texts.isBlank(wpsClientProperties.getAppId())
-                || Texts.isBlank(wpsClientProperties.getAppSecret());
+                || Texts.isBlank(wpsClientProperties.getAppSecret())
+                || Texts.isBlank(appPreviewUploadProperties.getRootParentId())
+                || Texts.isBlank(appPreviewUploadProperties.getDriveName());
     }
 }

@@ -22,6 +22,7 @@ public class CapabilityRoutePolicy {
 
     private final List<CapabilityRouteRule> rules = Arrays.asList(
             exact(HttpMethod.POST, "/api/v1/app/previews", ApiCode.APP_PREVIEW_CREATE),
+            exact(HttpMethod.GET, "/api/v1/wps/oauth/authorize-url", ApiCode.USER_FILES_LIST),
             exact(HttpMethod.GET, "/api/v1/user/files", ApiCode.USER_FILES_LIST),
             suffix(HttpMethod.PATCH, USER_FILE_PATH, "/name", ApiCode.USER_FILES_RENAME),
             suffix(HttpMethod.POST, USER_FILE_PATH, "/download-url", ApiCode.USER_FILES_DOWNLOAD),

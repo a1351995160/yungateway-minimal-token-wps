@@ -2,90 +2,104 @@
 
 ## 设计目标
 
-USER 模式用于代表某个 WPS 用户访问用户文件能力。业务系统拿到的是网关内部 JWT，该 JWT 代表业务系统，不代表某个用户。因此 USER 模式还需要业务系统对本次请求中的 `userId` 做断言签名，防止攻击者篡改 `userId` 操作其他用户。
+USER 模式用于代表某个 WPS 用户访问用户文件能力。业务系统需要先为当前业务用户获取一个 USER JWT，再用这个 USER JWT 生成 WPS 授权链接、完成 WPS 回调、访问用户文件列表。
 
-## 用户断言请求头
+USER 主链路不再依赖普通 query 参数声明用户身份，也不再要求每次请求额外携带用户断言签名。服务端只信任 USER JWT 中的 `userId`。
 
-| Header | 说明 |
-| --- | --- |
-| `X-Yundoc-User-Id` | 当前操作用户 ID。 |
-| `X-Yundoc-User-Timestamp` | Unix epoch seconds。 |
-| `X-Yundoc-User-Nonce` | 一次性随机串，最长 128。 |
-| `X-Yundoc-User-Signature` | 对 canonical string 的 HMAC-SHA256 签名，Base64 URL 编码。 |
+## USER JWT
 
-## 签名输入
-
-`UserAssertionVerifier` 使用以下字段拼接签名输入，每行一个字段：
-
-```text
-HTTP_METHOD
-APPLICATION_PATH
-QUERY_STRING
-businessSystemId
-clientId
-userId
-timestamp
-nonce
-```
-
-示例：
-
-```text
-GET
-/api/v1/user/files
-userId=user-001&limit=50
-biz_local_demo
-local-client
-user-001
-1760000000
-nonce-001
-```
-
-签名密钥当前使用 `yundoc.client-secret.pepper`，算法为 `HmacSHA256`。签名校验使用常量时间比较。
-
-## 校验规则
-
-| 校验 | 说明 |
-| --- | --- |
-| `userId` 必填 | 查询参数中的用户 ID 不能为空。 |
-| Header 用户一致 | `userId` 必须等于 `X-Yundoc-User-Id`。 |
-| 时间窗口 | timestamp 与服务端当前时间差不能超过 `yundoc.user-assertion.max-clock-skew`。 |
-| nonce 格式 | 只允许字母、数字、点、下划线、冒号、@、横线。 |
-| nonce 防重放 | 同一 `businessSystemId + nonce` 只能使用一次。 |
-| 请求绑定 | 签名绑定 method、path、query、businessSystemId、clientId、userId、timestamp、nonce。 |
-
-## 缺少 WPS user token 时
-
-当 `LocalWpsUserTokenCache` 没有对应用户 token 时，服务返回 `REAUTH_REQUIRED`，错误 details 中包含：
+业务系统通过 token 接口获取 USER JWT：
 
 ```json
 {
-  "authorizeUrl": "https://wps.example/oauth/authorize?...",
+  "clientId": "local-client",
+  "clientSecret": "raw-secret",
+  "identityType": "USER",
+  "userId": "user-001"
+}
+```
+
+JWT 中包含：
+
+| 字段 | 说明 |
+| --- | --- |
+| `identityType` | 固定为 `USER`。 |
+| `businessSystemId` | 业务系统 ID。 |
+| `clientId` | 业务系统 clientId。 |
+| `userId` | 当前操作用户 ID。 |
+| `tokenVersion` | token 版本。 |
+| `permissionVersion` | 权限版本。 |
+
+APP JWT 调 USER 接口会被拒绝。USER JWT 调 APP 接口默认也会被拒绝。
+
+## 授权链接
+
+业务系统调用：
+
+```http
+GET /api/v1/wps/oauth/authorize-url
+Authorization: Bearer <USER JWT>
+```
+
+服务返回：
+
+```json
+{
+  "authorizeUrl": "https://openapi.wps.cn/oauth2/auth?...",
   "expiresIn": 300
 }
 ```
 
-业务系统应将用户引导到 `authorizeUrl` 完成 WPS 授权。
+授权链接包含：
 
-## OAuth state
-
-服务生成一次性 `state`，并缓存：
-
-| 字段 | 说明 |
+| 参数 | 说明 |
 | --- | --- |
-| `state` | 随机 UUID。 |
-| `userId` | 需要授权的用户 ID。 |
-| `businessSystemId` | 发起授权的业务系统。 |
-| `expiresAt` | state 过期时间。 |
+| `client_id` | WPS app id。 |
+| `response_type` | 固定为 `code`。 |
+| `redirect_uri` | WPS 后台登记的回调地址。 |
+| `scope` | WPS 用户授权范围。 |
+| `state` | 服务端生成的一次性随机值。 |
 
-WPS 回调 `/api/v1/wps/oauth/callback` 时，服务通过 `stateCache.take(state)` 校验并消费 state。
+`state` 绑定 `businessSystemId`、`clientId`、`userId` 和过期时间，用于防 CSRF 和找回授权上下文。
 
-## user token 缓存
+## 回调与 token 保存
 
-WPS OAuth code 换回 `WpsUserToken` 后，服务以 `userId` 维度写入 `LocalWpsUserTokenCache`。当前设计不按业务系统拆分 user token，因为同一个 WPS 用户授权后可被网关复用，避免业务系统每切换一次用户都重新获取 WPS user token。
+用户在 WPS 完成授权后，WPS 回调：
 
-需要注意：
+```http
+GET /api/v1/wps/oauth/callback?code=<code>&state=<state>
+```
 
-- 本地缓存只适合 MVP 单实例。
-- 多实例生产环境需要 Redis 或数据库。
-- 如果后续需要按租户或 WPS company 隔离，应将缓存 key 扩展为 `tenant/company/userId`。
+服务处理规则：
+
+- `code` 和 `state` 必填。
+- `state` 必须存在、未过期、未使用。
+- `state` 使用后立即消费，重复回调失败。
+- 服务端用 `authorization_code` 换取 WPS user access token 和 refresh token。
+- WPS token 只保存在服务端，不返回给业务系统。
+
+## 文件列表
+
+业务系统调用：
+
+```http
+GET /api/v1/user/files?parentFileId=root&limit=50
+Authorization: Bearer <USER JWT>
+```
+
+服务从 USER JWT 中读取 `userId`，查找该用户的 WPS user token，然后调用 WPS 文件列表接口。
+
+如果兼容期请求仍传入 query `userId`，该值必须与 USER JWT 中的 `userId` 一致，否则返回 `VALIDATION_FAILED`。
+
+## token 刷新
+
+WPS user access token 即将过期时，服务会使用 refresh token 自动刷新：
+
+- 刷新成功：保存新的 access token 和新的 refresh token。
+- 刷新失败或 refresh token 失效：移除本地 token，返回 `REAUTH_REQUIRED`，业务系统需要重新引导用户授权。
+
+## 当前边界
+
+- 当前本地实现使用内存缓存保存 WPS user token 和 OAuth state。
+- 生产多实例需要替换为 Redis、数据库加密存储或专用凭证服务。
+- refresh token 属于高敏凭证，日志和响应中不得出现原文。

@@ -1,5 +1,7 @@
 package com.wps.yundoc.common.context;
 
+import com.wps.yundoc.businesssystem.domain.WpsIdentityType;
+
 /**
  * RequestContext component.
  *
@@ -10,6 +12,7 @@ public class RequestContext {
     private final String requestId;
     private final String businessSystemId;
     private final String clientId;
+    private final WpsIdentityType identityType;
     private final String jti;
     private final Integer tokenVersion;
     private final Integer permissionVersion;
@@ -20,6 +23,7 @@ public class RequestContext {
         this.requestId = builder.requestId();
         this.businessSystemId = builder.businessSystemId();
         this.clientId = builder.clientId();
+        this.identityType = builder.identityType();
         this.jti = builder.jti();
         this.tokenVersion = builder.tokenVersion();
         this.permissionVersion = builder.permissionVersion();
@@ -41,6 +45,10 @@ public class RequestContext {
 
     public String getClientId() {
         return clientId;
+    }
+
+    public WpsIdentityType getIdentityType() {
+        return identityType;
     }
 
     public String getJti() {

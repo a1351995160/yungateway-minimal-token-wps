@@ -9,21 +9,22 @@ public class UserFileListCommand {
 
     private final String userId;
     private final String businessSystemId;
+    private final String clientId;
     private final String parentFileId;
     private final int limit;
     private final String cursor;
 
-    public UserFileListCommand(
-            String userId,
-            String businessSystemId,
-            String parentFileId,
-            int limit,
-            String cursor) {
-        this.userId = userId;
-        this.businessSystemId = businessSystemId;
-        this.parentFileId = parentFileId;
-        this.limit = limit;
-        this.cursor = cursor;
+    private UserFileListCommand(Builder builder) {
+        this.userId = builder.userId;
+        this.businessSystemId = builder.businessSystemId;
+        this.clientId = builder.clientId;
+        this.parentFileId = builder.parentFileId;
+        this.limit = builder.limit;
+        this.cursor = builder.cursor;
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     public String getUserId() {
@@ -32,6 +33,10 @@ public class UserFileListCommand {
 
     public String getBusinessSystemId() {
         return businessSystemId;
+    }
+
+    public String getClientId() {
+        return clientId;
     }
 
     public String getParentFileId() {
@@ -44,5 +49,49 @@ public class UserFileListCommand {
 
     public String getCursor() {
         return cursor;
+    }
+
+    public static class Builder {
+
+        private String userId;
+        private String businessSystemId;
+        private String clientId;
+        private String parentFileId;
+        private int limit;
+        private String cursor;
+
+        public Builder userId(String userId) {
+            this.userId = userId;
+            return this;
+        }
+
+        public Builder businessSystemId(String businessSystemId) {
+            this.businessSystemId = businessSystemId;
+            return this;
+        }
+
+        public Builder clientId(String clientId) {
+            this.clientId = clientId;
+            return this;
+        }
+
+        public Builder parentFileId(String parentFileId) {
+            this.parentFileId = parentFileId;
+            return this;
+        }
+
+        public Builder limit(int limit) {
+            this.limit = limit;
+            return this;
+        }
+
+        public Builder cursor(String cursor) {
+            this.cursor = cursor;
+            return this;
+        }
+
+        public UserFileListCommand build() {
+            return new UserFileListCommand(this);
+        }
     }
 }

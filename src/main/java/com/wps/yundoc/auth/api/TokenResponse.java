@@ -16,11 +16,15 @@ public class TokenResponse {
     private final String accessToken;
     private final long expiresIn;
     private final List<String> apiPermissions;
+    private final String identityType;
+    private final String userId;
 
     public TokenResponse(AuthToken token) {
         this.accessToken = token.getAccessToken();
         this.expiresIn = token.getExpiresIn();
         this.apiPermissions = token.getApiPermissions();
+        this.identityType = token.getPrincipal().getIdentityType().name();
+        this.userId = token.getPrincipal().getUserId();
     }
 
     public String getAccessToken() {
@@ -37,5 +41,13 @@ public class TokenResponse {
 
     public List<String> getApiPermissions() {
         return apiPermissions;
+    }
+
+    public String getIdentityType() {
+        return identityType;
+    }
+
+    public String getUserId() {
+        return userId;
     }
 }

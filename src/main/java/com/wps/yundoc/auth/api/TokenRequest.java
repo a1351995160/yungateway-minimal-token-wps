@@ -18,6 +18,12 @@ public class TokenRequest {
     @Size(max = 128)
     private String clientSecret;
 
+    @Size(max = 16)
+    private String identityType;
+
+    @Size(max = 128)
+    private String userId;
+
     public String getClientId() {
         return clientId;
     }
@@ -32,5 +38,21 @@ public class TokenRequest {
 
     public void setClientSecret(String clientSecret) {
         this.clientSecret = clientSecret;
+    }
+
+    public String getIdentityType() {
+        return identityType;
+    }
+
+    public void setIdentityType(String identityType) {
+        this.identityType = identityType;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

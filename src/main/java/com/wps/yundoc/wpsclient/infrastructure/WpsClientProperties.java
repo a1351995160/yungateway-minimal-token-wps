@@ -18,6 +18,12 @@ public class WpsClientProperties {
     private String previewPath = "";
     private String tokenPath = "";
     private String fileListPath = "";
+    private String driveListPath = "/v7/drives";
+    private String driveCreatePath = "/v7/drives/create";
+    private String fileChildrenPathTemplate = "/v7/drives/{driveId}/files/{parentId}/children";
+    private String fileCreatePathTemplate = "/v7/drives/{driveId}/files/{parentId}/create";
+    private String requestUploadPathTemplate = "/v7/drives/{driveId}/files/{parentId}/request_upload";
+    private String commitUploadPathTemplate = "/v7/drives/{driveId}/files/{parentId}/commit_upload";
     private String authorizePath = "";
     private String userTokenPath = "";
     private String redirectUri = "";
@@ -26,6 +32,7 @@ public class WpsClientProperties {
     private String appSecret = "";
     private String signatureVersion = WpsRequestSigner.KSO_1;
     private List<String> previewUrlAllowedHosts = new ArrayList<>();
+    private List<String> uploadUrlAllowedHostSuffixes = new ArrayList<>();
     private Duration connectTimeout = Duration.ofSeconds(2);
     private Duration readTimeout = Duration.ofSeconds(5);
     private int maxRetries = 1;
@@ -60,6 +67,54 @@ public class WpsClientProperties {
 
     public void setFileListPath(String fileListPath) {
         this.fileListPath = fileListPath;
+    }
+
+    public String getDriveListPath() {
+        return driveListPath;
+    }
+
+    public void setDriveListPath(String driveListPath) {
+        this.driveListPath = driveListPath;
+    }
+
+    public String getDriveCreatePath() {
+        return driveCreatePath;
+    }
+
+    public void setDriveCreatePath(String driveCreatePath) {
+        this.driveCreatePath = driveCreatePath;
+    }
+
+    public String getFileChildrenPathTemplate() {
+        return fileChildrenPathTemplate;
+    }
+
+    public void setFileChildrenPathTemplate(String fileChildrenPathTemplate) {
+        this.fileChildrenPathTemplate = fileChildrenPathTemplate;
+    }
+
+    public String getFileCreatePathTemplate() {
+        return fileCreatePathTemplate;
+    }
+
+    public void setFileCreatePathTemplate(String fileCreatePathTemplate) {
+        this.fileCreatePathTemplate = fileCreatePathTemplate;
+    }
+
+    public String getRequestUploadPathTemplate() {
+        return requestUploadPathTemplate;
+    }
+
+    public void setRequestUploadPathTemplate(String requestUploadPathTemplate) {
+        this.requestUploadPathTemplate = requestUploadPathTemplate;
+    }
+
+    public String getCommitUploadPathTemplate() {
+        return commitUploadPathTemplate;
+    }
+
+    public void setCommitUploadPathTemplate(String commitUploadPathTemplate) {
+        this.commitUploadPathTemplate = commitUploadPathTemplate;
     }
 
     public String getAuthorizePath() {
@@ -124,6 +179,14 @@ public class WpsClientProperties {
 
     public void setPreviewUrlAllowedHosts(List<String> previewUrlAllowedHosts) {
         this.previewUrlAllowedHosts = previewUrlAllowedHosts;
+    }
+
+    public List<String> getUploadUrlAllowedHostSuffixes() {
+        return uploadUrlAllowedHostSuffixes;
+    }
+
+    public void setUploadUrlAllowedHostSuffixes(List<String> uploadUrlAllowedHostSuffixes) {
+        this.uploadUrlAllowedHostSuffixes = uploadUrlAllowedHostSuffixes;
     }
 
     public Duration getConnectTimeout() {

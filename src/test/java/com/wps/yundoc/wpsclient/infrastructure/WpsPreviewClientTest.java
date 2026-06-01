@@ -16,7 +16,10 @@ import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.client.ExpectedCount.once;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
@@ -123,10 +126,17 @@ class WpsPreviewClientTest {
         RestTemplate restTemplate = new RestTemplate();
         MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
         WpsHttpClient client = new WpsHttpClient(properties(), new RestTemplateBuilder(), restTemplate);
-        String body = "{\"code\":0,\"data\":{\"accessToken\":\"app-token\",\"expireAt\":\"2026-05-26T18:00:00+08:00\"}}";
-        server.expect(once(), requestTo("https://wps.test/oauth/token"))
+        String body = "{\"access_token\":\"app-token\",\"expires_in\":7200,\"token_type\":\"bearer\"}";
+        server.expect(once(), requestTo("https://wps.test/oauth2/token"))
+                .andExpect(request -> assertThat(request.getHeaders().getContentType())
+                        .isNotNull()
+                        .matches(MediaType.APPLICATION_FORM_URLENCODED::isCompatibleWith))
                 .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
-                        .startsWith("KSO-1 wps-app:"))
+                        .isNull())
+                .andExpect(content().string(allOf(
+                        containsString("grant_type=client_credentials"),
+                        containsString("client_id=wps-app"),
+                        containsString("client_secret=wps-secret"))))
                 .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
 
         assertThat(client.issueAppToken().getAccessToken()).isEqualTo("app-token");
@@ -162,7 +172,7 @@ class WpsPreviewClientTest {
         WpsClientProperties properties = new WpsClientProperties();
         properties.setBaseUrl("https://wps.test");
         properties.setPreviewPath("/api/preview-links");
-        properties.setTokenPath("/oauth/token");
+        properties.setTokenPath("/oauth2/token");
         properties.setAppId("wps-app");
         properties.setAppSecret("wps-secret");
         properties.setPreviewUrlAllowedHosts(Collections.singletonList("preview"));

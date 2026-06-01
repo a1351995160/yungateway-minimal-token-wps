@@ -2,11 +2,9 @@ package com.wps.yundoc.capability.apppreview.application;
 
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.capability.apppreview.domain.AppPreviewFolder;
 import com.wps.yundoc.credential.application.WpsCredentialService;
 import com.wps.yundoc.credential.domain.WpsCredential;
-import com.wps.yundoc.wpsclient.application.WpsPreviewClient;
-import com.wps.yundoc.wpsclient.application.WpsPreviewLink;
-import com.wps.yundoc.wpsclient.application.WpsPreviewRequest;
 import org.springframework.stereotype.Service;
 
 /**
@@ -17,35 +15,42 @@ import org.springframework.stereotype.Service;
 @Service
 public class AppPreviewService {
 
-    private static final String WPS_FILE_SOURCE = "WPS_FILE";
+    private static final int MIN_EXPIRE_SECONDS = 60;
+    private static final int MAX_EXPIRE_SECONDS = 86400;
 
     private final WpsCredentialService credentialService;
-    private final WpsPreviewClient previewClient;
+    private final AppPreviewFileStagingService stagingService;
+    private final AppPreviewFolderService folderService;
+    private final AppPreviewWpsUploadService uploadService;
 
-    public AppPreviewService(WpsCredentialService credentialService, WpsPreviewClient previewClient) {
+    public AppPreviewService(
+            WpsCredentialService credentialService,
+            AppPreviewFileStagingService stagingService,
+            AppPreviewFolderService folderService,
+            AppPreviewWpsUploadService uploadService) {
         this.credentialService = credentialService;
-        this.previewClient = previewClient;
+        this.stagingService = stagingService;
+        this.folderService = folderService;
+        this.uploadService = uploadService;
     }
 
     public AppPreviewResult createPreview(AppPreviewCommand command) {
-        validateSource(command);
-        WpsCredential credential = credentialService.appCredential();
-        WpsPreviewRequest request = previewRequest(command, credential);
-        WpsPreviewLink link = previewClient.createPreview(request);
-        return new AppPreviewResult(link.getPreviewUrl(), link.getExpireAt());
+        validateExpireSeconds(command.getExpireSeconds());
+        try (StagedAppPreviewFile stagedFile = stagingService.stage(command.getFile(), command.getDisplayName())) {
+            return createPreview(command, stagedFile);
+        }
     }
 
-    private void validateSource(AppPreviewCommand command) {
-        if (WPS_FILE_SOURCE.equals(command.getSourceType())) {
+    private AppPreviewResult createPreview(AppPreviewCommand command, StagedAppPreviewFile stagedFile) {
+        WpsCredential credential = credentialService.appCredential();
+        AppPreviewFolder folder = folderService.ensureFolder(command.getBusinessSystemId(), credential.getAccessToken());
+        return uploadService.uploadAndCreatePreview(command, credential, folder, stagedFile);
+    }
+
+    private void validateExpireSeconds(int expireSeconds) {
+        if (expireSeconds >= MIN_EXPIRE_SECONDS && expireSeconds <= MAX_EXPIRE_SECONDS) {
             return;
         }
         throw new YundocException(YundocErrorCode.VALIDATION_FAILED);
-    }
-
-    private WpsPreviewRequest previewRequest(AppPreviewCommand command, WpsCredential credential) {
-        return new WpsPreviewRequest(
-                command.getFileId(),
-                command.getExpireSeconds(),
-                credential.getAccessToken());
     }
 }

@@ -48,7 +48,7 @@ class CapabilityRouteRule {
         if (requestPath == null) {
             return false;
         }
-        String normalizedPath = normalizeTrailingSlash(requestPath);
+        String normalizedPath = normalizeTrailingSlash(removePathParameters(requestPath));
         if (matchType == RouteMatchType.EXACT) {
             return path.equals(normalizedPath);
         }
@@ -97,5 +97,25 @@ class CapabilityRouteRule {
             return value;
         }
         return value.substring(0, value.length() - 1);
+    }
+
+    private String removePathParameters(String value) {
+        String[] segments = value.split(PATH_SEPARATOR, -1);
+        StringBuilder normalized = new StringBuilder(value.length());
+        for (int index = 0; index < segments.length; index++) {
+            if (index > 0) {
+                normalized.append(PATH_SEPARATOR);
+            }
+            normalized.append(removePathParameter(segments[index]));
+        }
+        return normalized.toString();
+    }
+
+    private String removePathParameter(String segment) {
+        int separator = segment.indexOf(';');
+        if (separator < 0) {
+            return segment;
+        }
+        return segment.substring(0, separator);
     }
 }

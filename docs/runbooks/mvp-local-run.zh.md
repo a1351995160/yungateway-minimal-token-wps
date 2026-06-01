@@ -40,11 +40,12 @@
 1. `POST /api/v1/admin/auth/login` 获取 `adminJwt`
 2. `POST /api/v1/admin/business-systems` 创建业务系统，记录 `clientId` 与一次性 `clientSecret`
 3. `PUT /api/v1/admin/business-systems/{businessSystemId}/api-permissions` 配置 `app-preview:create` 与 `user-files:list`
-4. `POST /api/v1/auth/token` 使用 `clientId + clientSecret` 获取内部 JWT
-5. `POST /api/v1/app/previews` 调用 APP 预览
-6. `GET /api/v1/user/files?userId={userId}` 获取 `REAUTH_REQUIRED.error.details.authorizeUrl`
-7. 访问 `GET /api/v1/wps/oauth/callback?code=mock-code&state={state}`
-8. 再次调用 `GET /api/v1/user/files?userId={userId}` 获取文件列表，响应字段为 `data.items` 与 `data.nextCursor`
+4. `POST /api/v1/auth/token` 使用 `clientId + clientSecret` 获取 APP JWT
+5. `POST /api/v1/app/previews` 携带 APP JWT 调用 APP 预览
+6. `POST /api/v1/auth/token` 使用 `clientId + clientSecret + identityType=USER + userId` 获取 USER JWT
+7. `GET /api/v1/wps/oauth/authorize-url` 携带 USER JWT 获取授权地址，或首次调用 `GET /api/v1/user/files` 获取 `REAUTH_REQUIRED.error.details.authorizeUrl`
+8. 访问 `GET /api/v1/wps/oauth/callback?code=mock-code&state={state}`
+9. 再次调用 `GET /api/v1/user/files` 携带 USER JWT 获取文件列表，响应字段为 `data.items` 与 `data.nextCursor`
 
 ## 关键配置
 
@@ -65,4 +66,5 @@
 - 401 `TOKEN_INVALID`：JWT 过期，或 `tokenVersion` / `permissionVersion` 已变化。
 - 403 `API_PERMISSION_DENIED`：业务系统未配置当前能力权限。
 - 401 `REAUTH_REQUIRED`：USER token 缓存未命中，按 `authorizeUrl` 完成 OAuth callback。
-- 400 `USER_ID_REQUIRED`：USER 能力缺少 `userId`。
+- 400 `USER_ID_REQUIRED`：USER JWT 缺少 `userId`。
+- 400 `VALIDATION_FAILED`：兼容 query `userId` 与 USER JWT 中的 `userId` 不一致，或其他入参不合法。
