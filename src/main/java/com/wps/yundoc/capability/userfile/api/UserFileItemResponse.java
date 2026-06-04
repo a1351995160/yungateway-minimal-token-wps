@@ -21,6 +21,10 @@ public class UserFileItemResponse extends UserFileResponse {
         return item.getType();
     }
 
+    public String getDriveId() {
+        return item.getDriveId();
+    }
+
     public boolean isFolder() {
         return item.isFolder();
     }

@@ -60,10 +60,16 @@ public class YundocConfigurationHealthIndicator implements HealthIndicator {
     }
 
     private boolean missingRealWpsConfiguration() {
+        return missingWpsClientConfiguration() || missingAppPreviewConfiguration();
+    }
+
+    private boolean missingWpsClientConfiguration() {
         return Texts.isBlank(wpsClientProperties.getBaseUrl())
                 || Texts.isBlank(wpsClientProperties.getPreviewPath())
                 || Texts.isBlank(wpsClientProperties.getTokenPath())
                 || Texts.isBlank(wpsClientProperties.getFileListPath())
+                || Texts.isBlank(wpsClientProperties.getFileSearchPath())
+                || Texts.isBlank(wpsClientProperties.getFileDownloadPathTemplate())
                 || Texts.isBlank(wpsClientProperties.getDriveListPath())
                 || Texts.isBlank(wpsClientProperties.getDriveCreatePath())
                 || Texts.isBlank(wpsClientProperties.getFileChildrenPathTemplate())
@@ -75,8 +81,11 @@ public class YundocConfigurationHealthIndicator implements HealthIndicator {
                 || Texts.isBlank(wpsClientProperties.getRedirectUri())
                 || Texts.isBlank(wpsClientProperties.getOauthScope())
                 || Texts.isBlank(wpsClientProperties.getAppId())
-                || Texts.isBlank(wpsClientProperties.getAppSecret())
-                || Texts.isBlank(appPreviewUploadProperties.getRootParentId())
+                || Texts.isBlank(wpsClientProperties.getAppSecret());
+    }
+
+    private boolean missingAppPreviewConfiguration() {
+        return Texts.isBlank(appPreviewUploadProperties.getRootParentId())
                 || Texts.isBlank(appPreviewUploadProperties.getDriveName());
     }
 }

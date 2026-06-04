@@ -7,11 +7,15 @@ import com.wps.yundoc.wpsclient.application.WpsCreateFolderRequest;
 import com.wps.yundoc.wpsclient.application.WpsDrive;
 import com.wps.yundoc.wpsclient.application.WpsDriveList;
 import com.wps.yundoc.wpsclient.application.WpsDriveListRequest;
+import com.wps.yundoc.wpsclient.application.WpsDownloadHash;
 import com.wps.yundoc.wpsclient.application.WpsFileClient;
 import com.wps.yundoc.wpsclient.application.WpsFileChildrenRequest;
+import com.wps.yundoc.wpsclient.application.WpsFileDownloadInfo;
+import com.wps.yundoc.wpsclient.application.WpsFileDownloadRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileItem;
 import com.wps.yundoc.wpsclient.application.WpsFileList;
 import com.wps.yundoc.wpsclient.application.WpsFileListRequest;
+import com.wps.yundoc.wpsclient.application.WpsFileSearchRequest;
 import com.wps.yundoc.wpsclient.application.WpsRequestUploadRequest;
 import com.wps.yundoc.wpsclient.application.WpsStoreRequest;
 import com.wps.yundoc.wpsclient.application.WpsUploadFileRequest;
@@ -30,8 +34,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -46,6 +52,9 @@ public class WpsFileHttpClient implements WpsFileClient {
 
     private static final HttpMethod UPLOAD_METHOD = HttpMethod.PUT;
     private static final int HASH_PREFIX_LENGTH = 12;
+    private static final int PATH_VARIABLE_COUNT = 6;
+    private static final String PAGE_SIZE_PARAM = "page_size";
+    private static final String PAGE_TOKEN_PARAM = "page_token";
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
@@ -76,6 +85,36 @@ public class WpsFileHttpClient implements WpsFileClient {
                 Integer.valueOf(fileList.getItems().size()),
                 Boolean.valueOf(Texts.hasText(fileList.getNextCursor())));
         return fileList;
+    }
+
+    @Override
+    public WpsFileList searchFiles(WpsFileSearchRequest request) {
+        LOGGER.info("WPS请求开始 操作=搜索文件 关键词长度={} 分页大小={} 是否有分页标识={}",
+                Integer.valueOf(request.getKeyword().length()),
+                Integer.valueOf(request.getPageSize()),
+                Boolean.valueOf(Texts.hasText(request.getPageToken())));
+        WpsFileSearchResponse response = executeWpsOperation("搜索文件", () -> exchange(request));
+        WpsFileList fileList = toSearchFileList(response);
+        LOGGER.info("WPS请求结果 操作=搜索文件 文件数量={} 是否有下一页={}",
+                Integer.valueOf(fileList.getItems().size()),
+                Boolean.valueOf(Texts.hasText(fileList.getNextCursor())));
+        return fileList;
+    }
+
+    @Override
+    public WpsFileDownloadInfo downloadInfo(WpsFileDownloadRequest request) {
+        LOGGER.info("WPS请求开始 操作=获取下载信息 空间ID={} 文件ID={} 是否返回哈希={} 是否内网地址={}",
+                request.getDriveId(),
+                request.getFileId(),
+                Boolean.valueOf(request.isWithHash()),
+                Boolean.valueOf(request.isInternal()));
+        WpsFileDownloadResponse response = executeWpsOperation("获取下载信息", () -> exchange(request));
+        WpsFileDownloadInfo downloadInfo = toDownloadInfo(response);
+        LOGGER.info("WPS请求结果 操作=获取下载信息 空间ID={} 文件ID={} 哈希数量={}",
+                request.getDriveId(),
+                request.getFileId(),
+                Integer.valueOf(downloadInfo.getHashes().size()));
+        return downloadInfo;
     }
 
     @Override
@@ -204,6 +243,25 @@ public class WpsFileHttpClient implements WpsFileClient {
                 WpsDriveListResponse.class).getBody();
     }
 
+    private WpsFileSearchResponse exchange(WpsFileSearchRequest request) {
+        String url = fileSearchUrl(request);
+        return restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity(request.getAccessToken(), url),
+                WpsFileSearchResponse.class).getBody();
+    }
+
+    private WpsFileDownloadResponse exchange(WpsFileDownloadRequest request) {
+        URI uri = fileDownloadUri(request);
+        String url = uri.toString();
+        return restTemplate.exchange(
+                uri,
+                HttpMethod.GET,
+                entity(request.getAccessToken(), url),
+                WpsFileDownloadResponse.class).getBody();
+    }
+
     private WpsDriveResponse exchange(WpsCreateDriveRequest request) {
         String url = driveCreateUrl();
         CreateDrivePayload payload = new CreateDrivePayload(
@@ -218,26 +276,29 @@ public class WpsFileHttpClient implements WpsFileClient {
     }
 
     private WpsFileListResponse exchange(WpsFileChildrenRequest request) {
-        String url = fileChildrenUrl(request);
+        URI uri = fileChildrenUri(request);
+        String url = uri.toString();
         return restTemplate.exchange(
-                url,
+                uri,
                 HttpMethod.GET,
                 entity(request.getAccessToken(), url),
                 WpsFileListResponse.class).getBody();
     }
 
     private WpsFileItemResponse exchange(WpsCreateFolderRequest request) {
-        String url = fileCreateUrl(request.getDriveId(), request.getParentFileId());
+        URI uri = fileCreateUri(request.getDriveId(), request.getParentFileId());
+        String url = uri.toString();
         CreateFolderPayload payload = new CreateFolderPayload(request.getName(), request.getOnNameConflict());
         return restTemplate.exchange(
-                url,
+                uri,
                 HttpMethod.POST,
                 jsonEntity(request.getAccessToken(), url, HttpMethod.POST, payload),
                 WpsFileItemResponse.class).getBody();
     }
 
     private WpsRequestUploadResponse exchange(WpsRequestUploadRequest request) {
-        String url = requestUploadUrl(request.getDriveId(), request.getParentFileId());
+        URI uri = requestUploadUri(request.getDriveId(), request.getParentFileId());
+        String url = uri.toString();
         RequestUploadPayload payload = new RequestUploadPayload(
                 request.getHashes(),
                 request.isInternal(),
@@ -245,7 +306,7 @@ public class WpsFileHttpClient implements WpsFileClient {
                 request.getOnNameConflict(),
                 request.getSize());
         return restTemplate.exchange(
-                url,
+                uri,
                 HttpMethod.POST,
                 jsonEntity(request.getAccessToken(), url, HttpMethod.POST, payload),
                 WpsRequestUploadResponse.class).getBody();
@@ -262,10 +323,11 @@ public class WpsFileHttpClient implements WpsFileClient {
     }
 
     private WpsFileItemResponse exchange(WpsCommitUploadRequest request) {
-        String url = commitUploadUrl(request.getDriveId(), request.getParentFileId());
+        URI uri = commitUploadUri(request.getDriveId(), request.getParentFileId());
+        String url = uri.toString();
         CommitUploadPayload payload = new CommitUploadPayload(request.getUploadId());
         return restTemplate.exchange(
-                url,
+                uri,
                 HttpMethod.POST,
                 jsonEntity(request.getAccessToken(), url, HttpMethod.POST, payload),
                 WpsFileItemResponse.class).getBody();
@@ -290,6 +352,18 @@ public class WpsFileHttpClient implements WpsFileClient {
     private WpsDriveList toDriveList(WpsDriveListResponse response) {
         DriveListData data = WpsClientSupport.requireSuccessData(response);
         return new WpsDriveList(toDrives(data.getItems()), data.getNextPageToken());
+    }
+
+    private WpsFileList toSearchFileList(WpsFileSearchResponse response) {
+        SearchFileListData data = WpsClientSupport.requireSuccessData(response);
+        return new WpsFileList(toSearchItems(data.getItems()), data.getNextCursor());
+    }
+
+    private WpsFileDownloadInfo toDownloadInfo(WpsFileDownloadResponse response) {
+        DownloadInfoData data = WpsClientSupport.requireSuccessData(response);
+        return new WpsFileDownloadInfo(
+                WpsClientSupport.requireText(data.getUrl()),
+                toDownloadHashes(data.getHashes()));
     }
 
     private WpsDrive toDrive(WpsDriveResponse response) {
@@ -330,6 +404,34 @@ public class WpsFileHttpClient implements WpsFileClient {
         return result;
     }
 
+    private List<WpsFileItem> toSearchItems(List<SearchFileItemData> items) {
+        List<WpsFileItem> result = new ArrayList<>();
+        for (SearchFileItemData item : safeSearchItems(items)) {
+            result.add(toSearchItem(item));
+        }
+        return result;
+    }
+
+    private WpsFileItem toSearchItem(SearchFileItemData item) {
+        if (item == null) {
+            throw WpsClientSupport.upstreamError(null);
+        }
+        return toItem(WpsClientSupport.requireData(item.getFile()));
+    }
+
+    private List<WpsDownloadHash> toDownloadHashes(List<DownloadHashData> hashes) {
+        List<WpsDownloadHash> result = new ArrayList<>();
+        for (DownloadHashData hash : safeHashes(hashes)) {
+            if (hash == null) {
+                throw WpsClientSupport.upstreamError(null);
+            }
+            result.add(new WpsDownloadHash(
+                    WpsClientSupport.requireText(hash.getType()),
+                    WpsClientSupport.requireText(hash.getSum())));
+        }
+        return result;
+    }
+
     private List<FileListItemData> safeItems(List<FileListItemData> items) {
         if (items == null) {
             return Collections.emptyList();
@@ -342,6 +444,20 @@ public class WpsFileHttpClient implements WpsFileClient {
             return Collections.emptyList();
         }
         return items;
+    }
+
+    private List<SearchFileItemData> safeSearchItems(List<SearchFileItemData> items) {
+        if (items == null) {
+            return Collections.emptyList();
+        }
+        return items;
+    }
+
+    private List<DownloadHashData> safeHashes(List<DownloadHashData> hashes) {
+        if (hashes == null) {
+            return Collections.emptyList();
+        }
+        return hashes;
     }
 
     private WpsDrive toDrive(DriveData item) {
@@ -359,12 +475,14 @@ public class WpsFileHttpClient implements WpsFileClient {
         if (item == null) {
             throw WpsClientSupport.upstreamError(null);
         }
-        return new WpsFileItem(
-                item.getFileId(),
-                item.getName(),
-                item.getType(),
-                item.isFolder(),
-                item.getUpdatedAt());
+        return WpsFileItem.builder()
+                .fileId(item.getFileId())
+                .driveId(item.getDriveId())
+                .name(item.getName())
+                .type(item.getType())
+                .folder(item.isFolder())
+                .updatedAt(item.getUpdatedAt())
+                .build();
     }
 
     private HttpEntity<Void> entity(WpsFileListRequest request, String url) {
@@ -420,17 +538,37 @@ public class WpsFileHttpClient implements WpsFileClient {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl()
                         + properties.getDriveListPath())
                 .queryParam("allotee_type", "app")
-                .queryParam("page_size", Integer.valueOf(request.getPageSize()));
+                .queryParam(PAGE_SIZE_PARAM, Integer.valueOf(request.getPageSize()));
         addPageToken(builder, request.getPageToken());
         return builder.toUriString();
     }
 
-    private String fileChildrenUrl(WpsFileChildrenRequest request) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(fileChildrenBaseUrl(request))
-                .queryParam("filter_type", "folder")
-                .queryParam("page_size", Integer.valueOf(request.getPageSize()));
+    private String fileSearchUrl(WpsFileSearchRequest request) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl()
+                        + properties.getFileSearchPath())
+                .queryParam("keyword", request.getKeyword())
+                .queryParam("type", "all")
+                .queryParam(PAGE_SIZE_PARAM, Integer.valueOf(request.getPageSize()))
+                .queryParam("with_drive", Boolean.TRUE);
         addPageToken(builder, request.getPageToken());
         return builder.toUriString();
+    }
+
+    private URI fileDownloadUri(WpsFileDownloadRequest request) {
+        return pathBuilder(properties.getFileDownloadPathTemplate())
+                .queryParam("with_hash", Boolean.valueOf(request.isWithHash()))
+                .queryParam("internal", Boolean.valueOf(request.isInternal()))
+                .buildAndExpand(pathVariables(request.getDriveId(), null, request.getFileId()))
+                .toUri();
+    }
+
+    private URI fileChildrenUri(WpsFileChildrenRequest request) {
+        UriComponentsBuilder builder = pathBuilder(properties.getFileChildrenPathTemplate())
+                .queryParam("filter_type", "folder")
+                .queryParam(PAGE_SIZE_PARAM, Integer.valueOf(request.getPageSize()));
+        addPageToken(builder, request.getPageToken());
+        return builder.buildAndExpand(pathVariables(request.getDriveId(), request.getParentFileId(), null))
+                .toUri();
     }
 
     private void addCursor(UriComponentsBuilder builder, String cursor) {
@@ -441,7 +579,7 @@ public class WpsFileHttpClient implements WpsFileClient {
 
     private void addPageToken(UriComponentsBuilder builder, String pageToken) {
         if (Texts.hasText(pageToken)) {
-            builder.queryParam("page_token", pageToken);
+            builder.queryParam(PAGE_TOKEN_PARAM, pageToken);
         }
     }
 
@@ -453,31 +591,45 @@ public class WpsFileHttpClient implements WpsFileClient {
         return properties.getBaseUrl() + properties.getDriveCreatePath();
     }
 
-    private String fileChildrenBaseUrl(WpsFileChildrenRequest request) {
-        return properties.getBaseUrl() + path(
-                properties.getFileChildrenPathTemplate(),
-                request.getDriveId(),
-                request.getParentFileId());
+    private URI fileCreateUri(String driveId, String parentFileId) {
+        return expandedPathUri(properties.getFileCreatePathTemplate(), driveId, parentFileId, null);
     }
 
-    private String fileCreateUrl(String driveId, String parentFileId) {
-        return properties.getBaseUrl() + path(properties.getFileCreatePathTemplate(), driveId, parentFileId);
+    private URI requestUploadUri(String driveId, String parentFileId) {
+        return expandedPathUri(properties.getRequestUploadPathTemplate(), driveId, parentFileId, null);
     }
 
-    private String requestUploadUrl(String driveId, String parentFileId) {
-        return properties.getBaseUrl() + path(properties.getRequestUploadPathTemplate(), driveId, parentFileId);
+    private URI commitUploadUri(String driveId, String parentFileId) {
+        return expandedPathUri(properties.getCommitUploadPathTemplate(), driveId, parentFileId, null);
     }
 
-    private String commitUploadUrl(String driveId, String parentFileId) {
-        return properties.getBaseUrl() + path(properties.getCommitUploadPathTemplate(), driveId, parentFileId);
+    private URI expandedPathUri(String template, String driveId, String parentFileId, String fileId) {
+        return pathBuilder(template)
+                .buildAndExpand(pathVariables(driveId, parentFileId, fileId))
+                .toUri();
     }
 
-    private String path(String template, String driveId, String parentFileId) {
-        return template
-                .replace("{drive_id}", driveId)
-                .replace("{driveId}", driveId)
-                .replace("{parent_id}", parentFileId)
-                .replace("{parentId}", parentFileId);
+    private UriComponentsBuilder pathBuilder(String template) {
+        return UriComponentsBuilder.fromHttpUrl(properties.getBaseUrl() + template)
+                .encode();
+    }
+
+    private Map<String, String> pathVariables(String driveId, String parentFileId, String fileId) {
+        Map<String, String> variables = new HashMap<>(PATH_VARIABLE_COUNT);
+        variables.put("drive_id", nullToEmpty(driveId));
+        variables.put("driveId", nullToEmpty(driveId));
+        variables.put("parent_id", nullToEmpty(parentFileId));
+        variables.put("parentId", nullToEmpty(parentFileId));
+        variables.put("file_id", nullToEmpty(fileId));
+        variables.put("fileId", nullToEmpty(fileId));
+        return variables;
+    }
+
+    private String nullToEmpty(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value;
     }
 
     private HttpMethod uploadMethod(WpsStoreRequest storeRequest) {

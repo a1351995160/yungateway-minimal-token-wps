@@ -17,6 +17,22 @@ public interface WpsFileClient {
     WpsFileList listFiles(WpsFileListRequest request);
 
     /**
+     * 按关键词搜索当前用户可访问的 WPS 文件。
+     *
+     * @param request 文件搜索请求
+     * @return 文件列表
+     */
+    WpsFileList searchFiles(WpsFileSearchRequest request);
+
+    /**
+     * 获取 WPS 文件下载信息。
+     *
+     * @param request 下载信息请求
+     * @return 下载信息
+     */
+    WpsFileDownloadInfo downloadInfo(WpsFileDownloadRequest request);
+
+    /**
      * 查询当前身份下的 WPS 空间列表。
      *
      * @param request 空间列表请求

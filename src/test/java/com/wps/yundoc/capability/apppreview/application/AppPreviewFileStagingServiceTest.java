@@ -1,6 +1,7 @@
 package com.wps.yundoc.capability.apppreview.application;
 
 import com.wps.yundoc.capability.apppreview.infrastructure.AppPreviewUploadProperties;
+import com.wps.yundoc.capability.upload.application.FileStagingService;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ class AppPreviewFileStagingServiceTest {
 
     @Test
     void stagesFileWithSha256AndCleansTempFile() {
-        AppPreviewFileStagingService service = new AppPreviewFileStagingService(properties(10L));
+        AppPreviewFileStagingService service = service(properties(10L));
         MockMultipartFile file = new MockMultipartFile("file", "demo.docx", null, "hello".getBytes());
 
         StagedAppPreviewFile staged = service.stage(file, null);
@@ -33,7 +34,7 @@ class AppPreviewFileStagingServiceTest {
 
     @Test
     void rejectsFileLargerThanLimit() {
-        AppPreviewFileStagingService service = new AppPreviewFileStagingService(properties(4L));
+        AppPreviewFileStagingService service = service(properties(4L));
         MockMultipartFile file = new MockMultipartFile("file", "demo.docx", null, "hello".getBytes());
 
         assertThatThrownBy(() -> service.stage(file, null))
@@ -43,7 +44,7 @@ class AppPreviewFileStagingServiceTest {
 
     @Test
     void rejectsUnsafeFileName() {
-        AppPreviewFileStagingService service = new AppPreviewFileStagingService(properties(10L));
+        AppPreviewFileStagingService service = service(properties(10L));
         MockMultipartFile file = new MockMultipartFile("file", "../secret.docx", null, "hello".getBytes());
 
         assertThatThrownBy(() -> service.stage(file, null))
@@ -55,5 +56,9 @@ class AppPreviewFileStagingServiceTest {
         AppPreviewUploadProperties properties = new AppPreviewUploadProperties();
         properties.setMaxFileSizeBytes(maxBytes);
         return properties;
+    }
+
+    private AppPreviewFileStagingService service(AppPreviewUploadProperties properties) {
+        return new AppPreviewFileStagingService(new FileStagingService(properties));
     }
 }

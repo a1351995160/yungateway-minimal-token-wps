@@ -2,6 +2,8 @@ package com.wps.yundoc.capability.userfile.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wps.yundoc.credential.domain.WpsUserToken;
+import com.wps.yundoc.credential.infrastructure.LocalWpsUserTokenCache;
 import com.wps.yundoc.testsupport.BusinessSystemCredentials;
 import com.wps.yundoc.testsupport.BusinessSystemFixture;
 import com.wps.yundoc.testsupport.UserAssertionSigner;
@@ -13,16 +15,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.OffsetDateTime;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +48,9 @@ class UserFileControllerTest {
 
     @Autowired
     private BusinessSystemFixture businessSystemFixture;
+
+    @Autowired
+    private LocalWpsUserTokenCache userTokenCache;
 
     @Test
     void returnsReauthWhenUserTokenMissing() throws IOException {
@@ -92,6 +101,52 @@ class UserFileControllerTest {
     }
 
     @Test
+    void callbackStoresTokenAndSearchSucceeds() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-search-success", "user-files:search");
+        String token = userAccessToken(credentials, "user-search-001");
+        ResponseEntity<String> first = searchFiles(token, "?keyword=contract&limit=20");
+        String state = stateFrom(first);
+
+        restTemplate.getForEntity(url("/api/v1/wps/oauth/callback?code=ok-code&state=" + state), String.class);
+        ResponseEntity<String> second = searchFiles(token, "?keyword=contract&limit=20");
+
+        JsonNode data = objectMapper.readTree(second.getBody()).path("data");
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(data.path("items").get(0).path("fileId").asText()).isEqualTo("wps-file-001");
+        assertThat(data.path("items").get(0).path("driveId").asText()).isEqualTo("mock-drive");
+        assertThat(data.path("nextCursor").asText()).isEqualTo("next-search-cursor");
+    }
+
+    @Test
+    void callbackStoresTokenAndDownloadInfoSucceeds() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-download-success", "user-files:download");
+        String userId = "user-download-001";
+        userTokenCache.put(userId, wpsUserToken());
+        String token = userAccessToken(credentials, userId);
+        ResponseEntity<String> second = downloadInfo(token, "file-001", "?driveId=drive-001");
+
+        JsonNode data = objectMapper.readTree(second.getBody()).path("data");
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(data.path("url").asText()).isEqualTo("https://download.wps.test/files/file-001");
+    }
+
+    @Test
+    void callbackStoresTokenAndUploadSucceeds() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-upload-success", "user-files:create");
+        String userId = "user-upload-001";
+        userTokenCache.put(userId, wpsUserToken());
+        String token = userAccessToken(credentials, userId);
+        ResponseEntity<String> second = uploadFile(token, "?driveId=drive-001&parentFileId=folder-001", "invoice.pdf");
+
+        JsonNode data = objectMapper.readTree(second.getBody()).path("data");
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(data.path("fileId").asText()).isEqualTo("mock-uploaded-file");
+    }
+
+    @Test
     void returnsAuthorizationUrlForUserJwt() throws IOException {
         BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-authorize-url");
         String token = userAccessToken(credentials, "user-004");
@@ -137,6 +192,95 @@ class UserFileControllerTest {
     }
 
     @Test
+    void rejectsAppJwtOnUserFileSearchRequest() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-search-app-jwt", "user-files:search");
+        String token = appAccessToken(credentials);
+
+        ResponseEntity<String> response = searchFiles(token, "?keyword=contract");
+
+        JsonNode error = objectMapper.readTree(response.getBody()).path("error");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.path("code").asText()).isEqualTo("API_PERMISSION_DENIED");
+    }
+
+    @Test
+    void rejectsMissingSearchPermission() throws IOException {
+        BusinessSystemCredentials credentials = userFileCredentials("biz-user-files-search-denied");
+        String token = userAccessToken(credentials, "user-search-denied");
+
+        ResponseEntity<String> response = searchFiles(token, "?keyword=contract");
+
+        JsonNode error = objectMapper.readTree(response.getBody()).path("error");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.path("code").asText()).isEqualTo("API_PERMISSION_DENIED");
+    }
+
+    @Test
+    void rejectsUserMismatchOnDownloadInfo() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-download-mismatch", "user-files:download");
+        String token = userAccessToken(credentials, "user-011");
+
+        ResponseEntity<String> response = downloadInfo(token, "file-001", "?driveId=drive-001&userId=user-012");
+
+        JsonNode error = objectMapper.readTree(response.getBody()).path("error");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(error.path("code").asText()).isEqualTo("VALIDATION_FAILED");
+    }
+
+    @Test
+    void rejectsPathShapedDownloadResourceIds() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-download-path-resource", "user-files:download");
+        String userId = "user-download-path-resource";
+        userTokenCache.put(userId, wpsUserToken());
+        String token = userAccessToken(credentials, userId);
+
+        ResponseEntity<String> response = downloadInfo(token, "file-001", "?driveId=drive-001/extra");
+
+        JsonNode error = objectMapper.readTree(response.getBody()).path("error");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(error.path("code").asText()).isEqualTo("VALIDATION_FAILED");
+    }
+
+    @Test
+    void rejectsPathShapedUploadResourceIds() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-upload-path-resource", "user-files:create");
+        String userId = "user-upload-path-resource";
+        userTokenCache.put(userId, wpsUserToken());
+        String token = userAccessToken(credentials, userId);
+
+        ResponseEntity<String> response = uploadFile(
+                token,
+                "?driveId=drive-001&parentFileId=folder-001/extra",
+                "invoice.pdf");
+
+        JsonNode error = objectMapper.readTree(response.getBody()).path("error");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(error.path("code").asText()).isEqualTo("VALIDATION_FAILED");
+    }
+
+    @Test
+    void rejectsUnsafeUploadDisplayNameBeforeWpsUpload() throws IOException {
+        BusinessSystemCredentials credentials =
+                businessSystemFixture.enabled("biz-user-files-upload-unsafe-name", "user-files:create");
+        String userId = "user-upload-unsafe";
+        userTokenCache.put(userId, wpsUserToken());
+        String token = userAccessToken(credentials, userId);
+
+        ResponseEntity<String> response = uploadFile(
+                token,
+                "?driveId=drive-001&parentFileId=folder-001",
+                "../secret.pdf");
+
+        JsonNode error = objectMapper.readTree(response.getBody()).path("error");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(error.path("code").asText()).isEqualTo("VALIDATION_FAILED");
+    }
+
+    @Test
     void rejectsUserJwtOnAppPreviewRequest() throws IOException {
         BusinessSystemCredentials credentials =
                 businessSystemFixture.enabled("biz-user-files-user-jwt-preview", "app-preview:create");
@@ -169,6 +313,35 @@ class UserFileControllerTest {
                 url("/api/v1/user/files" + query),
                 HttpMethod.GET,
                 authorized(token),
+                String.class);
+    }
+
+    private ResponseEntity<String> searchFiles(String token, String query) {
+        return restTemplate.exchange(
+                url("/api/v1/user/files/search" + query),
+                HttpMethod.GET,
+                authorized(token),
+                String.class);
+    }
+
+    private ResponseEntity<String> downloadInfo(String token, String fileId, String query) {
+        return restTemplate.exchange(
+                url("/api/v1/user/files/" + fileId + "/download-url" + query),
+                HttpMethod.POST,
+                authorized(token),
+                String.class);
+    }
+
+    private ResponseEntity<String> uploadFile(String token, String query, String displayName) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("displayName", displayName);
+        body.add("file", new NamedByteArrayResource("hello".getBytes(), "invoice.pdf"));
+        return restTemplate.postForEntity(
+                url("/api/v1/user/files" + query),
+                new HttpEntity<>(body, headers),
                 String.class);
     }
 
@@ -248,5 +421,29 @@ class UserFileControllerTest {
 
     private String url(String path) {
         return "http://localhost:" + port + path;
+    }
+
+    private WpsUserToken wpsUserToken() {
+        return new WpsUserToken(
+                "mock-user-access-value",
+                OffsetDateTime.now().plusMinutes(30),
+                "mock-user-refresh-value",
+                OffsetDateTime.now().plusDays(1),
+                "bearer");
+    }
+
+    private static class NamedByteArrayResource extends ByteArrayResource {
+
+        private final String filename;
+
+        NamedByteArrayResource(byte[] byteArray, String filename) {
+            super(byteArray);
+            this.filename = filename;
+        }
+
+        @Override
+        public String getFilename() {
+            return filename;
+        }
     }
 }

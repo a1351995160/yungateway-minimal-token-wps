@@ -130,6 +130,7 @@ JWT 中携带 `tokenVersion` 和 `permissionVersion`：
 
 - `app-preview:create`
 - `user-files:list`
+- `user-files:search`
 - `user-files:rename`
 - `user-files:download`
 - `user-folders:rename`

@@ -76,6 +76,8 @@ class YundocConfigurationHealthIndicatorTest {
         properties.setPreviewPath("/api/preview-links");
         properties.setTokenPath("/oauth2/token");
         properties.setFileListPath("/api/user/files");
+        properties.setFileSearchPath("/v7/files/search");
+        properties.setFileDownloadPathTemplate("/v7/drives/{driveId}/files/{fileId}/download");
         properties.setDriveListPath("/v7/drives");
         properties.setDriveCreatePath("/v7/drives/create");
         properties.setFileChildrenPathTemplate("/v7/drives/{driveId}/files/{parentId}/children");

@@ -25,6 +25,7 @@ public class CapabilityRoutePolicy {
             exact(HttpMethod.POST, "/api/v1/app/previews", ApiCode.APP_PREVIEW_CREATE),
             exact(HttpMethod.GET, "/api/v1/wps/oauth/authorize-url", ApiCode.USER_FILES_LIST),
             exact(HttpMethod.GET, "/api/v1/user/files", ApiCode.USER_FILES_LIST),
+            exact(HttpMethod.GET, "/api/v1/user/files/search", ApiCode.USER_FILES_SEARCH),
             suffix(HttpMethod.PATCH, USER_FILE_PATH, "/name", ApiCode.USER_FILES_RENAME),
             suffix(HttpMethod.POST, USER_FILE_PATH, "/download-url", ApiCode.USER_FILES_DOWNLOAD),
             suffix(HttpMethod.PATCH, "/api/v1/user/folders/", "/name", ApiCode.USER_FOLDERS_RENAME),

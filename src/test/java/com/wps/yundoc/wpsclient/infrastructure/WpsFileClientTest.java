@@ -8,10 +8,13 @@ import com.wps.yundoc.wpsclient.application.WpsCreateFolderRequest;
 import com.wps.yundoc.wpsclient.application.WpsDrive;
 import com.wps.yundoc.wpsclient.application.WpsDriveList;
 import com.wps.yundoc.wpsclient.application.WpsDriveListRequest;
+import com.wps.yundoc.wpsclient.application.WpsFileDownloadInfo;
+import com.wps.yundoc.wpsclient.application.WpsFileDownloadRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileChildrenRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileItem;
 import com.wps.yundoc.wpsclient.application.WpsFileList;
 import com.wps.yundoc.wpsclient.application.WpsFileListRequest;
+import com.wps.yundoc.wpsclient.application.WpsFileSearchRequest;
 import com.wps.yundoc.wpsclient.application.WpsRequestUploadRequest;
 import com.wps.yundoc.wpsclient.application.WpsStoreRequest;
 import com.wps.yundoc.wpsclient.application.WpsUploadFileRequest;
@@ -111,6 +114,106 @@ class WpsFileClientTest {
         assertThatThrownBy(() -> client.listFiles(listRequest))
                 .isInstanceOf(YundocException.class)
                 .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
+    }
+
+    @Test
+    void searchesFilesWithOfficialQueryShape() {
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        WpsFileHttpClient client = new WpsFileHttpClient(properties(), new RestTemplateBuilder(), restTemplate);
+        String body = "{\"code\":0,\"data\":{\"items\":[{\"file\":{\"id\":\"file-001\","
+                + "\"drive_id\":\"drive-001\",\"name\":\"contract.docx\",\"type\":\"file\","
+                + "\"mtime\":1780000000}}],\"next_page_token\":\"next-page\"}}";
+        server.expect(once(), requestTo("https://wps.test/v7/files/search?keyword=contract&type=all"
+                        + "&page_size=20&with_drive=true"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization", "Bearer user-token"))
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_DATE_HEADER))
+                        .isNotBlank())
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
+                        .startsWith("KSO-1 wps-app:"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        WpsFileList result = client.searchFiles(new WpsFileSearchRequest("user-token", "contract", 20, null));
+
+        assertThat(result.getItems()).hasSize(1);
+        assertThat(result.getItems().get(0).getFileId()).isEqualTo("file-001");
+        assertThat(result.getItems().get(0).getDriveId()).isEqualTo("drive-001");
+        assertThat(result.getNextCursor()).isEqualTo("next-page");
+        server.verify();
+    }
+
+    @Test
+    void downloadsFileInfoWithOfficialPathAndQueryShape() {
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        WpsFileHttpClient client = new WpsFileHttpClient(properties(), new RestTemplateBuilder(), restTemplate);
+        String body = "{\"code\":0,\"data\":{\"url\":\"https://download.wps.test/file\","
+                + "\"hashes\":[{\"type\":\"sha256\",\"sum\":\"abc123\"}]}}";
+        server.expect(once(), requestTo("https://wps.test/v7/drives/drive-001/files/file-001/download"
+                        + "?with_hash=true&internal=false"))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization", "Bearer user-token"))
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_DATE_HEADER))
+                        .isNotBlank())
+                .andExpect(request -> assertThat(request.getHeaders().getFirst(WpsRequestSigner.KSO_AUTHORIZATION_HEADER))
+                        .startsWith("KSO-1 wps-app:"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        WpsFileDownloadInfo result = client.downloadInfo(new WpsFileDownloadRequest(
+                "user-token",
+                "drive-001",
+                "file-001",
+                true,
+                false));
+
+        assertThat(result.getUrl()).isEqualTo("https://download.wps.test/file");
+        assertThat(result.getHashes()).hasSize(1);
+        assertThat(result.getHashes().get(0).getSum()).isEqualTo("abc123");
+        server.verify();
+    }
+
+    @Test
+    void mapsDownloadInfoWithoutUrlToStableErrorCode() {
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        WpsFileHttpClient client = new WpsFileHttpClient(noRetryProperties(), new RestTemplateBuilder(), restTemplate);
+        String body = "{\"code\":0,\"data\":{\"hashes\":[]}}";
+        server.expect(once(), requestTo("https://wps.test/v7/drives/drive-001/files/file-001/download"
+                        + "?with_hash=true&internal=false"))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+        WpsFileDownloadRequest request = new WpsFileDownloadRequest(
+                "user-token",
+                "drive-001",
+                "file-001",
+                true,
+                false);
+
+        assertThatThrownBy(() -> client.downloadInfo(request))
+                .isInstanceOf(YundocException.class)
+                .hasFieldOrPropertyWithValue("errorCode", YundocErrorCode.WPS_UPSTREAM_ERROR);
+    }
+
+    @Test
+    void encodesDownloadPathTemplateVariablesAsSegments() {
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        WpsFileHttpClient client = new WpsFileHttpClient(properties(), new RestTemplateBuilder(), restTemplate);
+        String body = "{\"code\":0,\"data\":{\"url\":\"https://download.wps.test/file\",\"hashes\":[]}}";
+        server.expect(once(), requestTo("https://wps.test/v7/drives/drive-001%2Fextra/files/file-001%2Fextra/download"
+                        + "?with_hash=true&internal=false"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        WpsFileDownloadInfo result = client.downloadInfo(new WpsFileDownloadRequest(
+                "user-token",
+                "drive-001/extra",
+                "file-001/extra",
+                true,
+                false));
+
+        assertThat(result.getUrl()).isEqualTo("https://download.wps.test/file");
+        server.verify();
     }
 
     @Test
@@ -306,6 +409,8 @@ class WpsFileClientTest {
         WpsClientProperties properties = new WpsClientProperties();
         properties.setBaseUrl("https://wps.test");
         properties.setFileListPath("/api/user/files");
+        properties.setFileSearchPath("/v7/files/search");
+        properties.setFileDownloadPathTemplate("/v7/drives/{driveId}/files/{fileId}/download");
         properties.setDriveListPath("/v7/drives");
         properties.setDriveCreatePath("/v7/drives/create");
         properties.setFileChildrenPathTemplate("/v7/drives/{driveId}/files/{parentId}/children");

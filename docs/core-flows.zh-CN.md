@@ -158,6 +158,51 @@ end
 
 USER 模式下业务系统需要先为当前业务用户换取 USER JWT。签发 USER JWT 时，本服务会校验用户断言签名；调用 USER 接口时，服务端只信任 JWT 中的 `userId`。query `userId` 是兼容字段，如果传入，必须与 JWT 中的 `userId` 一致。这样即使攻击者修改 URL 参数，也不能改变实际操作用户。
 
+## USER 文件搜索、下载信息和上传
+
+```mermaid
+sequenceDiagram
+    participant B as 业务系统
+    participant C as UserFileController
+    participant S as UserFileService
+    participant A as WpsUserAuthorizationService
+    participant W as WpsFileClient
+    participant O as WPS OpenAPI
+    participant U as WPS 上传地址
+
+    B->>C: USER JWT + search/download/upload 请求
+    C->>C: 校验 userId、driveId、fileId、parentFileId、keyword
+    C->>S: command
+    S->>A: requireUserToken(userId, businessSystemId, clientId)
+    alt 搜索
+        S->>W: searchFiles(keyword, page_size, page_token)
+        W->>O: GET /v7/files/search
+        O-->>W: data.items[].file
+        W-->>S: WpsFileList
+        S-->>C: 标准化文件列表
+    else 下载信息
+        S->>W: downloadInfo(driveId, fileId)
+        W->>O: GET /v7/drives/{driveId}/files/{fileId}/download
+        O-->>W: url, hashes
+        S->>S: 校验 HTTPS、host、无 userInfo、无 fragment
+        S-->>C: 下载元数据
+    else 上传
+        S->>S: 暂存 multipart 文件并计算 sha256
+        S->>W: requestUpload(userToken, driveId, parentFileId)
+        W->>O: POST request_upload
+        O-->>W: uploadId, storeRequest
+        S->>W: uploadFile(storeRequest, tempFile)
+        W->>U: PUT 文件流
+        S->>W: commitUpload(uploadId)
+        W->>O: POST commit_upload
+        O-->>W: WPS file
+        S-->>C: 上传后的文件信息
+    end
+    C-->>B: ApiResponse
+```
+
+搜索使用独立权限码 `user-files:search`；下载信息使用 `user-files:download`；上传使用 `user-files:create`。三个接口都只接受 USER JWT，APP JWT 会在认证过滤器中被拒绝。下载信息接口只返回 WPS URL 给邮件服务拉取附件，网关不代理下载文件字节。
+
 ## WPS 用户授权链接
 
 ```mermaid

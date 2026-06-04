@@ -17,6 +17,8 @@
 | `preview-path` | 创建预览链接接口路径。 |
 | `token-path` | 获取 app token 的 OAuth token 接口路径，默认 `/oauth2/token`。 |
 | `file-list-path` | 查询用户文件列表接口路径。 |
+| `file-search-path` | WPS 文件搜索接口路径，默认 `/v7/files/search`。 |
+| `file-download-path-template` | WPS 文件下载信息接口路径模板，默认 `/v7/drives/{driveId}/files/{fileId}/download`。 |
 | `drive-list-path` | WPS 应用盘列表接口路径，默认 `/v7/drives`。 |
 | `drive-create-path` | WPS 新建应用盘接口路径，默认 `/v7/drives/create`。 |
 | `file-children-path-template` | WPS 子文件列表接口路径模板。 |
@@ -170,6 +172,45 @@ USER token 响应包含 `access_token`、`expires_in`、`refresh_token`、`refre
 3. 校验响应 envelope 成功。
 4. 将 WPS 文件项转换为内部 `WpsFileItem`。
 
+## 文件搜索
+
+`WpsFileHttpClient.searchFiles()` 使用 user token 调 WPS 官方文件搜索接口：
+
+| 项 | 值 |
+| --- | --- |
+| HTTP 方法 | `GET` |
+| WPS 路径 | `/v7/files/search` |
+| 权限 scope | 用户授权 `kso.file_search.readwrite` 或 `kso.file.search` |
+| 关键查询参数 | `keyword`、`type=all`、`page_size`、可选 `page_token`、`with_drive=true` |
+
+WPS 搜索响应为 `data.items[].file` 嵌套结构，网关只抽取文件 ID、drive ID、名称、类型、文件夹标记和更新时间，转换为内部 `WpsFileList`。
+
+## 文件下载信息
+
+`WpsFileHttpClient.downloadInfo()` 使用 user token 调 WPS 官方下载信息接口：
+
+| 项 | 值 |
+| --- | --- |
+| HTTP 方法 | `GET` |
+| WPS 路径 | `/v7/drives/{drive_id}/files/{file_id}/download` |
+| 权限 scope | 用户授权 `kso.file.read` 或 `kso.file.readwrite` |
+| 查询参数 | `with_hash=true`、`internal=false` |
+| 必要响应字段 | `data.url` |
+
+业务服务返回给调用方前会再次校验下载 URL：必须是 HTTPS、存在 host、没有 userInfo、没有 fragment。网关本期不做下载 URL host 白名单，也不代理文件字节。
+
+## USER 文件上传
+
+`UserFileService.uploadFile()` 使用当前用户的 WPS user token 完成三段式上传：
+
+1. 调用 `WpsUserAuthorizationService.requireUserToken(userId, businessSystemId, clientId)`。
+2. 使用共享 `FileStagingService` 暂存 multipart 文件，校验文件名、扩展名和大小，计算 SHA-256。
+3. 调用 WPS `request_upload`，目标 `driveId + parentFileId` 来自调用方。
+4. 使用 WPS 返回的 `store_request` 上传实体文件。
+5. 调用 WPS `commit_upload`，返回提交后的 WPS 文件信息。
+
+缺少 USER 授权时直接返回 `REAUTH_REQUIRED`，不会暂存文件，也不会进入 WPS 上传请求。
+
 ## HTTP 安全控制
 
 `WpsClientSupport` 对真实 WPS HTTP client 做统一保护：
@@ -179,6 +220,7 @@ USER token 响应包含 `access_token`、`expires_in`、`refresh_token`、`refre
 - 使用 `NoRedirectSimpleClientHttpRequestFactory` 禁止自动跟随重定向。
 - 对网络异常、HTTP 5xx、HTTP 429 做有限重试。
 - WPS 上传实体文件地址也按 HTTPS、host 后缀白名单和禁止重定向校验，上传方法只接受 `PUT`，避免把业务文件上传到非 WPS 地址或被任意 method 影响。
+- WPS 下载信息 URL 只做 HTTPS、host、userInfo、fragment 结构校验，不记录完整签名 URL。
 - 其他 RestClient 异常统一映射为 `WPS_UPSTREAM_ERROR`。
 
 ## 上游响应信任边界
