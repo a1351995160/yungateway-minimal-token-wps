@@ -8,6 +8,7 @@ import com.wps.yundoc.common.context.RequestContext;
 import com.wps.yundoc.common.context.RequestContextHolder;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.LogSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
@@ -100,20 +101,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void logAuthenticated(BusinessSystemPrincipal principal, String apiCode) {
+        if (!LOGGER.isInfoEnabled()) {
+            return;
+        }
         LOGGER.info(
-                "网关令牌校验通过 请求ID={} 业务系统ID={} 客户端ID={} 身份类型={} 接口编码={}",
+                "网关令牌校验通过 请求ID={} 业务系统ID={} 客户端ID指纹={} 身份类型={} 接口编码={}",
                 requestId(),
                 principal.getBusinessSystemId(),
-                principal.getClientId(),
+                LogSanitizer.fingerprint(principal.getClientId()),
                 principal.getIdentityType(),
                 apiCode);
     }
 
     private void logAuthenticationFailed(String apiCode, YundocException ex) {
-        LOGGER.warn("网关令牌校验失败 请求ID={} 接口编码={} 错误码={}",
-                requestId(),
-                apiCode,
-                ex.getErrorCode());
+        if (LOGGER.isWarnEnabled()) {
+            LOGGER.warn("网关令牌校验失败 请求ID={} 接口编码={} 错误码={}",
+                    requestId(),
+                    apiCode,
+                    ex.getErrorCode());
+        }
     }
 
     private String requestId() {

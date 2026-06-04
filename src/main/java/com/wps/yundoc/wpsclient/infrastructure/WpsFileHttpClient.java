@@ -153,17 +153,21 @@ public class WpsFileHttpClient implements WpsFileClient {
 
     @Override
     public void uploadFile(WpsUploadFileRequest request) {
-        LOGGER.info("WPS请求开始 操作=上传实体文件 文件大小={} 文件摘要前缀={} 请求方法={}",
-                Long.valueOf(request.getSize()),
-                sha256Prefix(request.getSha256()),
-                request.getStoreRequest().getMethod());
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS请求开始 操作=上传实体文件 文件大小={} 文件摘要前缀={} 请求方法={}",
+                    Long.valueOf(request.getSize()),
+                    sha256Prefix(request.getSha256()),
+                    request.getStoreRequest().getMethod());
+        }
         executeWpsOperation("上传实体文件", () -> {
             exchange(request);
             return null;
         });
-        LOGGER.info("WPS请求结果 操作=上传实体文件 文件大小={} 文件摘要前缀={}",
-                Long.valueOf(request.getSize()),
-                sha256Prefix(request.getSha256()));
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS请求结果 操作=上传实体文件 文件大小={} 文件摘要前缀={}",
+                    Long.valueOf(request.getSize()),
+                    sha256Prefix(request.getSha256()));
+        }
     }
 
     @Override
@@ -269,19 +273,13 @@ public class WpsFileHttpClient implements WpsFileClient {
 
     private <T> T executeWpsOperation(String operation, WpsClientSupport.WpsCall<T> call) {
         long startedAt = System.nanoTime();
-        try {
-            T result = WpsClientSupport.executeWithRetry(properties, operation, call);
+        T result = WpsClientSupport.executeWithRetry(properties, operation, call);
+        if (LOGGER.isInfoEnabled()) {
             LOGGER.info("WPS请求完成 操作={} 耗时毫秒={}",
                     operation,
                     Long.valueOf(elapsedMillis(startedAt)));
-            return result;
-        } catch (RuntimeException ex) {
-            LOGGER.error("WPS请求失败 操作={} 耗时毫秒={}",
-                    operation,
-                    Long.valueOf(elapsedMillis(startedAt)),
-                    ex);
-            throw ex;
         }
+        return result;
     }
 
     private WpsFileList toFileList(WpsFileListResponse response) {

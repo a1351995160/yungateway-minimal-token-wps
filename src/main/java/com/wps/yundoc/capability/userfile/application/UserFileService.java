@@ -2,6 +2,7 @@ package com.wps.yundoc.capability.userfile.application;
 
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.LogSanitizer;
 import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.credential.application.WpsUserAuthorizationService;
 import com.wps.yundoc.credential.domain.WpsUserToken;
@@ -78,22 +79,26 @@ public class UserFileService {
     }
 
     private void logListStarted(UserFileListCommand command) {
-        LOGGER.info("用户文件列表查询开始 业务系统ID={} 客户端ID={} 用户ID={} 父文件ID={} 分页大小={}",
-                command.getBusinessSystemId(),
-                command.getClientId(),
-                command.getUserId(),
-                parentFileId(command.getParentFileId()),
-                Integer.valueOf(limit(command.getLimit())));
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("用户文件列表查询开始 业务系统ID={} 客户端ID指纹={} 用户ID指纹={} 父文件ID指纹={} 分页大小={}",
+                    command.getBusinessSystemId(),
+                    LogSanitizer.fingerprint(command.getClientId()),
+                    LogSanitizer.fingerprint(command.getUserId()),
+                    LogSanitizer.fingerprint(parentFileId(command.getParentFileId())),
+                    Integer.valueOf(limit(command.getLimit())));
+        }
     }
 
     private void logListCompleted(UserFileListCommand command, WpsFileList fileList, long elapsedMillis) {
-        LOGGER.info("用户文件列表查询完成 业务系统ID={} 客户端ID={} 用户ID={} 文件数量={} 是否有下一页={} 耗时毫秒={}",
-                command.getBusinessSystemId(),
-                command.getClientId(),
-                command.getUserId(),
-                Integer.valueOf(fileList.getItems().size()),
-                Boolean.valueOf(Texts.hasText(fileList.getNextCursor())),
-                Long.valueOf(elapsedMillis));
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("用户文件列表查询完成 业务系统ID={} 客户端ID指纹={} 用户ID指纹={} 文件数量={} 是否有下一页={} 耗时毫秒={}",
+                    command.getBusinessSystemId(),
+                    LogSanitizer.fingerprint(command.getClientId()),
+                    LogSanitizer.fingerprint(command.getUserId()),
+                    Integer.valueOf(fileList.getItems().size()),
+                    Boolean.valueOf(Texts.hasText(fileList.getNextCursor())),
+                    Long.valueOf(elapsedMillis));
+        }
     }
 
     private long elapsedMillis(long startedAt) {

@@ -49,10 +49,12 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
 
     @Override
     public String authorizeUrl(String state) {
-        LOGGER.info("WPS用户授权地址已生成 请求路径={} 应用ID={} 状态前缀={}",
-                properties.getAuthorizePath(),
-                properties.getAppId(),
-                statePrefix(state));
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户授权地址已生成 请求路径={} 应用ID={} 状态前缀={}",
+                    properties.getAuthorizePath(),
+                    properties.getAppId(),
+                    statePrefix(state));
+        }
         return UriComponentsBuilder.fromHttpUrl(baseAuthorizeUrl())
                 .queryParam("client_id", properties.getAppId())
                 .queryParam("redirect_uri", properties.getRedirectUri())

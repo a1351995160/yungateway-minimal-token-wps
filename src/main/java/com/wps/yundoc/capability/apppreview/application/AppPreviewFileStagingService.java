@@ -47,11 +47,13 @@ public class AppPreviewFileStagingService {
         Path path = tempFile(fileName);
         try {
             StagedAppPreviewFile stagedFile = stageToPath(file, fileName, path);
-            LOGGER.info("应用预览文件暂存完成 文件名={} 文件大小={} 文件摘要前缀={} 耗时毫秒={}",
-                    stagedFile.getFileName(),
-                    Long.valueOf(stagedFile.getSize()),
-                    sha256Prefix(stagedFile.getSha256()),
-                    Long.valueOf(elapsedMillis(startedAt)));
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("应用预览文件暂存完成 文件名={} 文件大小={} 文件摘要前缀={} 耗时毫秒={}",
+                        stagedFile.getFileName(),
+                        Long.valueOf(stagedFile.getSize()),
+                        sha256Prefix(stagedFile.getSha256()),
+                        Long.valueOf(elapsedMillis(startedAt)));
+            }
             return stagedFile;
         } catch (RuntimeException ex) {
             deleteQuietly(path);

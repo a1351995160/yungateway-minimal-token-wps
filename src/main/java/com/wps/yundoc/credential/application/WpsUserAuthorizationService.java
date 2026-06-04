@@ -2,6 +2,7 @@ package com.wps.yundoc.credential.application;
 
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.LogSanitizer;
 import com.wps.yundoc.common.util.Texts;
 import com.wps.yundoc.credential.domain.OauthState;
 import com.wps.yundoc.credential.domain.WpsAuthorizationLink;
@@ -51,10 +52,7 @@ public class WpsUserAuthorizationService {
 
     public WpsUserToken requireUserToken(String userId, String businessSystemId) {
         WpsUserToken token = tokenCache.get(userId).orElseThrow(() -> reauthRequired(userId, businessSystemId, null));
-        LOGGER.info("WPS用户凭证缓存命中 用户ID={} 业务系统ID={} 过期时间={}",
-                userId,
-                businessSystemId,
-                token.getExpiresAt());
+        logTokenCacheHit(userId, businessSystemId, null, token);
         return token;
     }
 
@@ -62,31 +60,27 @@ public class WpsUserAuthorizationService {
         WpsUserToken token = tokenCache.get(userId)
                 .orElseThrow(() -> reauthRequired(userId, businessSystemId, clientId));
         if (!shouldRefresh(token)) {
-            LOGGER.info("WPS用户凭证缓存命中 用户ID={} 业务系统ID={} 客户端ID={} 过期时间={}",
-                    userId,
-                    businessSystemId,
-                    clientId,
-                    token.getExpiresAt());
+            logTokenCacheHit(userId, businessSystemId, clientId, token);
             return token;
         }
-        LOGGER.info("WPS用户凭证需要刷新 用户ID={} 业务系统ID={} 客户端ID={} 过期时间={}",
-                userId,
-                businessSystemId,
-                clientId,
-                token.getExpiresAt());
+        logTokenNeedsRefresh(userId, businessSystemId, clientId, token);
         return refreshUserToken(userId, businessSystemId, clientId, token);
     }
 
     public WpsAuthorizationLink authorizationLink(String userId, String businessSystemId, String clientId) {
-        LOGGER.info("开始生成WPS用户授权链接 用户ID={} 业务系统ID={} 客户端ID={}",
-                userId,
-                businessSystemId,
-                clientId);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("开始生成WPS用户授权链接 用户ID指纹={} 业务系统ID={} 客户端ID指纹={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId));
+        }
         return createAuthorizationLink(userId, businessSystemId, clientId);
     }
 
     public WpsOauthCallbackResult handleCallback(String code, String stateValue) {
-        LOGGER.info("开始处理WPS授权回调 状态前缀={}", statePrefix(stateValue));
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("开始处理WPS授权回调 状态指纹={}", LogSanitizer.fingerprint(stateValue));
+        }
         return completeAuthorization(code, stateValue);
     }
 
@@ -94,17 +88,10 @@ public class WpsUserAuthorizationService {
         String validCode = requiredText(code);
         String validState = requiredText(stateValue);
         OauthState state = validState(validState);
-        LOGGER.info("WPS授权码换取用户凭证开始 用户ID={} 业务系统ID={} 客户端ID={}",
-                state.getUserId(),
-                state.getBusinessSystemId(),
-                state.getClientId());
+        logExchangeCodeStarted(state);
         WpsUserToken token = authorizationClient.exchangeCode(validCode);
         tokenCache.put(state.getUserId(), token);
-        LOGGER.info("WPS用户授权完成 用户ID={} 业务系统ID={} 客户端ID={} 过期时间={}",
-                state.getUserId(),
-                state.getBusinessSystemId(),
-                state.getClientId(),
-                token.getExpiresAt());
+        logAuthorizationCompleted(state, token);
         return new WpsOauthCallbackResult(state.getUserId());
     }
 
@@ -115,10 +102,7 @@ public class WpsUserAuthorizationService {
             WpsUserToken token) {
         WpsUserToken currentToken = currentRefreshCandidate(userId, token);
         if (hasFreshConcurrentRefresh(currentToken, token)) {
-            LOGGER.info("WPS用户凭证已被并发刷新 用户ID={} 业务系统ID={} 客户端ID={}",
-                    userId,
-                    businessSystemId,
-                    clientId);
+            logConcurrentRefreshHit(userId, businessSystemId, clientId);
             return currentToken;
         }
         return refreshCurrentToken(userId, businessSystemId, clientId, currentToken);
@@ -150,17 +134,10 @@ public class WpsUserAuthorizationService {
             String businessSystemId,
             String clientId,
             WpsUserToken currentToken) {
-        LOGGER.info("开始刷新WPS用户凭证 用户ID={} 业务系统ID={} 客户端ID={}",
-                userId,
-                businessSystemId,
-                clientId);
+        logRefreshStarted(userId, businessSystemId, clientId);
         WpsUserToken refreshed = authorizationClient.refreshToken(currentToken.getRefreshToken());
         tokenCache.put(userId, refreshed);
-        LOGGER.info("WPS用户凭证刷新完成 用户ID={} 业务系统ID={} 客户端ID={} 过期时间={}",
-                userId,
-                businessSystemId,
-                clientId,
-                refreshed.getExpiresAt());
+        logRefreshCompleted(userId, businessSystemId, clientId, refreshed);
         return refreshed;
     }
 
@@ -171,11 +148,13 @@ public class WpsUserAuthorizationService {
             WpsUserToken currentToken,
             YundocException ex) {
         tokenCache.remove(userId, currentToken);
-        LOGGER.warn("WPS用户凭证刷新失败 用户ID={} 业务系统ID={} 客户端ID={} 错误码={}",
-                userId,
-                businessSystemId,
-                clientId,
-                ex.getErrorCode());
+        if (LOGGER.isWarnEnabled()) {
+            LOGGER.warn("WPS用户凭证刷新失败 用户ID指纹={} 业务系统ID={} 客户端ID指纹={} 错误码={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId),
+                    ex.getErrorCode());
+        }
     }
 
     private boolean shouldRefresh(WpsUserToken token) {
@@ -193,16 +172,15 @@ public class WpsUserAuthorizationService {
     private OauthState validState(String stateValue) {
         return stateCache.take(stateValue)
                 .orElseThrow(() -> {
-                    LOGGER.warn("WPS授权回调状态无效 状态前缀={}", statePrefix(stateValue));
+                    if (LOGGER.isWarnEnabled()) {
+                        LOGGER.warn("WPS授权回调状态无效 状态指纹={}", LogSanitizer.fingerprint(stateValue));
+                    }
                     return new YundocException(YundocErrorCode.VALIDATION_FAILED);
                 });
     }
 
     private YundocException reauthRequired(String userId, String businessSystemId, String clientId) {
-        LOGGER.info("WPS用户需要重新授权 用户ID={} 业务系统ID={} 客户端ID={}",
-                userId,
-                businessSystemId,
-                clientId);
+        logReauthorizationRequired(userId, businessSystemId, clientId);
         WpsAuthorizationLink link = createAuthorizationLink(userId, businessSystemId, clientId);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("authorizeUrl", link.getAuthorizeUrl());
@@ -214,12 +192,14 @@ public class WpsUserAuthorizationService {
         String state = UUID.randomUUID().toString();
         OffsetDateTime expiresAt = OffsetDateTime.now().plus(properties.getStateTtl());
         stateCache.put(new OauthState(state, userId, businessSystemId, clientId, expiresAt));
-        LOGGER.info("WPS用户授权链接已生成 用户ID={} 业务系统ID={} 客户端ID={} 状态前缀={} 过期时间={}",
-                userId,
-                businessSystemId,
-                clientId,
-                statePrefix(state),
-                expiresAt);
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户授权链接已生成 用户ID指纹={} 业务系统ID={} 客户端ID指纹={} 状态前缀={} 过期时间={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId),
+                    statePrefix(state),
+                    expiresAt);
+        }
         return new WpsAuthorizationLink(
                 authorizationClient.authorizeUrl(state),
                 properties.getStateTtl().getSeconds());
@@ -230,5 +210,81 @@ public class WpsUserAuthorizationService {
             return state;
         }
         return state.substring(0, STATE_PREFIX_LENGTH);
+    }
+
+    private void logTokenCacheHit(String userId, String businessSystemId, String clientId, WpsUserToken token) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户凭证缓存命中 用户ID指纹={} 业务系统ID={} 客户端ID指纹={} 过期时间={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId),
+                    token.getExpiresAt());
+        }
+    }
+
+    private void logTokenNeedsRefresh(String userId, String businessSystemId, String clientId, WpsUserToken token) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户凭证需要刷新 用户ID指纹={} 业务系统ID={} 客户端ID指纹={} 过期时间={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId),
+                    token.getExpiresAt());
+        }
+    }
+
+    private void logExchangeCodeStarted(OauthState state) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS授权码换取用户凭证开始 用户ID指纹={} 业务系统ID={} 客户端ID指纹={}",
+                    LogSanitizer.fingerprint(state.getUserId()),
+                    state.getBusinessSystemId(),
+                    LogSanitizer.fingerprint(state.getClientId()));
+        }
+    }
+
+    private void logAuthorizationCompleted(OauthState state, WpsUserToken token) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户授权完成 用户ID指纹={} 业务系统ID={} 客户端ID指纹={} 过期时间={}",
+                    LogSanitizer.fingerprint(state.getUserId()),
+                    state.getBusinessSystemId(),
+                    LogSanitizer.fingerprint(state.getClientId()),
+                    token.getExpiresAt());
+        }
+    }
+
+    private void logConcurrentRefreshHit(String userId, String businessSystemId, String clientId) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户凭证已被并发刷新 用户ID指纹={} 业务系统ID={} 客户端ID指纹={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId));
+        }
+    }
+
+    private void logRefreshStarted(String userId, String businessSystemId, String clientId) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("开始刷新WPS用户凭证 用户ID指纹={} 业务系统ID={} 客户端ID指纹={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId));
+        }
+    }
+
+    private void logRefreshCompleted(String userId, String businessSystemId, String clientId, WpsUserToken token) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户凭证刷新完成 用户ID指纹={} 业务系统ID={} 客户端ID指纹={} 过期时间={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId),
+                    token.getExpiresAt());
+        }
+    }
+
+    private void logReauthorizationRequired(String userId, String businessSystemId, String clientId) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户需要重新授权 用户ID指纹={} 业务系统ID={} 客户端ID指纹={}",
+                    LogSanitizer.fingerprint(userId),
+                    businessSystemId,
+                    LogSanitizer.fingerprint(clientId));
+        }
     }
 }
