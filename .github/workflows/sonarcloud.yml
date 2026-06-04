@@ -50,15 +50,29 @@ jobs:
           python3 scripts/ensure_sonarcloud_rules.py || \
             echo "::warning::SONAR_TOKEN cannot manage SonarCloud quality profiles; local PMD and SpotBugs checks remain enforced."
 
-      - name: Build, run local static checks, and scan
+      - name: Build and run local static checks
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B verify pmd:pmd pmd:check spotbugs:check
+
+      - name: Scan with SonarQube Cloud
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          chmod +x ./mvnw
-          ./mvnw -B verify pmd:pmd pmd:check spotbugs:check sonar:sonar \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }} \
-            -Dsonar.projectKey=a1351995160_yungateway-minimal-token-wps \
-            -Dsonar.projectName=yungateway-minimal-token-wps \
-            -Dsonar.java.pmd.reportPaths=target/pmd.xml \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+          for attempt in 1 2 3; do
+            ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+              -Dsonar.host.url=https://sonarcloud.io \
+              -Dsonar.token=${SONAR_TOKEN} \
+              -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }} \
+              -Dsonar.projectKey=a1351995160_yungateway-minimal-token-wps \
+              -Dsonar.projectName=yungateway-minimal-token-wps \
+              -Dsonar.java.pmd.reportPaths=target/pmd.xml \
+              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml && exit 0
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::SonarQube Cloud scan failed on attempt ${attempt}; retrying in 20 seconds."
+              sleep 20
+            fi
+          done
+
+          exit 1
