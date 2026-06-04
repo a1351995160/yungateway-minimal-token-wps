@@ -125,20 +125,18 @@ public class AuthController {
             rateLimiter.recordFailure(request.getClientId(), remoteAddress);
         }
         if (LOGGER.isWarnEnabled()) {
-            LOGGER.warn("令牌申请失败 请求ID={} 客户端ID指纹={} 身份类型={} 错误码={}",
+            LOGGER.warn("令牌申请失败 请求ID={} 客户端ID指纹={} 错误码={}",
                     requestId(),
                     LogSanitizer.fingerprint(request.getClientId()),
-                    request.getIdentityType(),
                     ex.getErrorCode());
         }
     }
 
     private void logTokenRequestStarted(TokenRequest request, String remoteAddress) {
         if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("令牌申请开始 请求ID={} 客户端ID指纹={} 身份类型={} 请求来源IP指纹={}",
+            LOGGER.info("令牌申请开始 请求ID={} 客户端ID指纹={} 请求来源IP指纹={}",
                     requestId(),
                     LogSanitizer.fingerprint(request.getClientId()),
-                    request.getIdentityType(),
                     LogSanitizer.fingerprint(remoteAddress));
         }
     }
