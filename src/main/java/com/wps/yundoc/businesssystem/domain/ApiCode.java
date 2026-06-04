@@ -19,6 +19,10 @@ public enum ApiCode {
      */
     USER_FILES_LIST("user-files:list", WpsIdentityType.USER),
     /**
+     * 搜索用户文件。
+     */
+    USER_FILES_SEARCH("user-files:search", WpsIdentityType.USER),
+    /**
      * 重命名用户文件。
      */
     USER_FILES_RENAME("user-files:rename", WpsIdentityType.USER),

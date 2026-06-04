@@ -12,7 +12,7 @@
 - 统一签发业务系统内部 JWT。
 - 统一校验业务系统 API 权限。
 - 支持 APP 模式接口，例如接收业务系统文件流、上传到 WPS 后创建文件预览。
-- 支持 USER 模式接口，例如基于 WPS user token 查询用户文件列表。
+- 支持 USER 模式接口，例如基于 WPS user token 查询、搜索、下载信息和上传用户文件。
 - 降低业务系统接触 WPS 敏感凭证的风险。
 - 为后续接入 Redis、TDSQL、审计、监控和更多 WPS 能力预留边界。
 
@@ -39,9 +39,10 @@
 | APP 文件预览 | `app-preview:create` | 已实现，业务系统上传文件流，网关上传到 WPS 后返回预览链接。 |
 | WPS 用户授权链接 | `user-files:list` | 已实现，需要 USER JWT，用于生成 WPS 授权地址。 |
 | USER 文件列表 | `user-files:list` | 已实现，需要 USER JWT 和 WPS user token。 |
+| USER 文件搜索 | `user-files:search` | 已实现，需要 USER JWT 和 WPS user token。 |
 | USER 文件重命名 | `user-files:rename` | 路由权限码已预留，业务 Controller 未实现。 |
-| USER 文件下载 | `user-files:download` | 路由权限码已预留，业务 Controller 未实现。 |
-| USER 文件创建 | `user-files:create` | 路由权限码已预留，业务 Controller 未实现。 |
+| USER 文件下载信息 | `user-files:download` | 已实现，返回 WPS 下载 URL 元数据，不代理文件字节。 |
+| USER 文件上传 | `user-files:create` | 已实现，上传到调用方传入的 `driveId + parentFileId`。 |
 | USER 文件查看 | `user-files:view` | 路由权限码已预留，业务 Controller 未实现。 |
 | USER 文件删除 | `user-files:delete` | 路由权限码已预留，业务 Controller 未实现。 |
 | USER 文件更新 | `user-files:update` | 路由权限码已预留，业务 Controller 未实现。 |

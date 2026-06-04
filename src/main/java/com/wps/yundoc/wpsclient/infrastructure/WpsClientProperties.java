@@ -19,6 +19,8 @@ public class WpsClientProperties {
     private String previewPath = "";
     private String tokenPath = "";
     private String fileListPath = "";
+    private String fileSearchPath = "";
+    private String fileDownloadPathTemplate = "";
     private String driveListPath = "";
     private String driveCreatePath = "";
     private String fileChildrenPathTemplate = "";
@@ -68,6 +70,22 @@ public class WpsClientProperties {
 
     public void setFileListPath(String fileListPath) {
         this.fileListPath = fileListPath;
+    }
+
+    public String getFileSearchPath() {
+        return fileSearchPath;
+    }
+
+    public void setFileSearchPath(String fileSearchPath) {
+        this.fileSearchPath = fileSearchPath;
+    }
+
+    public String getFileDownloadPathTemplate() {
+        return fileDownloadPathTemplate;
+    }
+
+    public void setFileDownloadPathTemplate(String fileDownloadPathTemplate) {
+        this.fileDownloadPathTemplate = fileDownloadPathTemplate;
     }
 
     public String getDriveListPath() {

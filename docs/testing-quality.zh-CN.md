@@ -29,9 +29,10 @@
 | `AppPreviewFileStagingServiceTest` | 文件暂存、sha256、大小限制和文件名校验。 |
 | `AppPreviewFolderServiceTest` | WPS 应用盘发现、业务系统文件夹创建和配置失败关闭。 |
 | `AppPreviewServiceTest` | APP token、文件夹、三段上传和预览创建编排。 |
-| `UserFileControllerTest` | USER 文件列表、JWT 用户身份、授权缺失、APP/USER 路由隔离。 |
+| `UserFileControllerTest` | USER 文件列表、搜索、下载信息、上传、JWT 用户身份、授权缺失、APP/USER 路由隔离。 |
+| `UserFileServiceTest` | USER 下载 URL 安全校验、缺少 user token 时上传不进入暂存或 WPS 三段式上传。 |
 | `WpsPreviewClientTest` | WPS 预览 client、重试、URL 校验。 |
-| `WpsFileClientTest` | WPS 文件列表、应用盘、文件夹、三段上传、提交上传和上传 URL 安全校验。 |
+| `WpsFileClientTest` | WPS 文件列表、搜索、下载信息、应用盘、文件夹、三段上传、提交上传和上传 URL 安全校验。 |
 | `WpsAuthorizationClientTest` | WPS OAuth 授权 URL 和 code 换 token。 |
 | `SchemaPolicyTest` | schema 约束。 |
 | `ArchitectureBoundaryTest` | 架构依赖边界。 |

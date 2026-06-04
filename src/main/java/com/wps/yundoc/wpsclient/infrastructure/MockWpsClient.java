@@ -12,9 +12,12 @@ import com.wps.yundoc.wpsclient.application.WpsDriveList;
 import com.wps.yundoc.wpsclient.application.WpsDriveListRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileClient;
 import com.wps.yundoc.wpsclient.application.WpsFileChildrenRequest;
+import com.wps.yundoc.wpsclient.application.WpsFileDownloadInfo;
+import com.wps.yundoc.wpsclient.application.WpsFileDownloadRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileItem;
 import com.wps.yundoc.wpsclient.application.WpsFileList;
 import com.wps.yundoc.wpsclient.application.WpsFileListRequest;
+import com.wps.yundoc.wpsclient.application.WpsFileSearchRequest;
 import com.wps.yundoc.wpsclient.application.WpsPreviewClient;
 import com.wps.yundoc.wpsclient.application.WpsPreviewLink;
 import com.wps.yundoc.wpsclient.application.WpsPreviewRequest;
@@ -48,6 +51,16 @@ public class MockWpsClient implements WpsPreviewClient, WpsAppTokenClient, WpsFi
     @Override
     public WpsFileList listFiles(WpsFileListRequest request) {
         return new WpsFileList(Collections.singletonList(mockFile()), "next-cursor");
+    }
+
+    @Override
+    public WpsFileList searchFiles(WpsFileSearchRequest request) {
+        return new WpsFileList(Collections.singletonList(mockFile()), "next-search-cursor");
+    }
+
+    @Override
+    public WpsFileDownloadInfo downloadInfo(WpsFileDownloadRequest request) {
+        return new WpsFileDownloadInfo("https://download.wps.test/files/" + request.getFileId(), Collections.emptyList());
     }
 
     @Override
@@ -112,7 +125,14 @@ public class MockWpsClient implements WpsPreviewClient, WpsAppTokenClient, WpsFi
     }
 
     private WpsFileItem mockFile() {
-        return new WpsFileItem("wps-file-001", "demo.docx", "WORD", false, "2026-05-26T18:00:00+08:00");
+        return WpsFileItem.builder()
+                .fileId("wps-file-001")
+                .driveId("mock-drive")
+                .name("demo.docx")
+                .type("WORD")
+                .folder(false)
+                .updatedAt("2026-05-26T18:00:00+08:00")
+                .build();
     }
 
     private WpsFileItem mockFolder() {

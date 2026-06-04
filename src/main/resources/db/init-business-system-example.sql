@@ -49,6 +49,7 @@ INSERT INTO biz_system_api_permission (
 ) VALUES
     ('biz_local_demo', 'app-preview:create', 'ENABLED', NOW(3), NOW(3)),
     ('biz_local_demo', 'user-files:list', 'ENABLED', NOW(3), NOW(3)),
+    ('biz_local_demo', 'user-files:search', 'ENABLED', NOW(3), NOW(3)),
     ('biz_local_demo', 'user-files:rename', 'ENABLED', NOW(3), NOW(3)),
     ('biz_local_demo', 'user-files:download', 'ENABLED', NOW(3), NOW(3)),
     ('biz_local_demo', 'user-folders:rename', 'ENABLED', NOW(3), NOW(3)),

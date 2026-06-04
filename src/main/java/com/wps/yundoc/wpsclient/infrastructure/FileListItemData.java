@@ -12,6 +12,8 @@ public class FileListItemData {
 
     @JsonAlias("id")
     private String fileId;
+    @JsonAlias("drive_id")
+    private String driveId;
     private String name;
     private String type;
     private boolean folder;
@@ -24,6 +26,14 @@ public class FileListItemData {
 
     public void setFileId(String fileId) {
         this.fileId = fileId;
+    }
+
+    public String getDriveId() {
+        return driveId;
+    }
+
+    public void setDriveId(String driveId) {
+        this.driveId = driveId;
     }
 
     public String getName() {

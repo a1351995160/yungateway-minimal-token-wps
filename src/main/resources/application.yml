@@ -47,6 +47,8 @@ yundoc:
     preview-path: /api/preview-links
     token-path: /oauth2/token
     file-list-path: /api/user/files
+    file-search-path: /v7/files/search
+    file-download-path-template: /v7/drives/{driveId}/files/{fileId}/download
     drive-list-path: /v7/drives
     drive-create-path: /v7/drives/create
     file-children-path-template: /v7/drives/{driveId}/files/{parentId}/children

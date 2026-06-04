@@ -8,9 +8,12 @@ import com.wps.yundoc.wpsclient.application.WpsDriveList;
 import com.wps.yundoc.wpsclient.application.WpsDriveListRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileChildrenRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileClient;
+import com.wps.yundoc.wpsclient.application.WpsFileDownloadInfo;
+import com.wps.yundoc.wpsclient.application.WpsFileDownloadRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileItem;
 import com.wps.yundoc.wpsclient.application.WpsFileList;
 import com.wps.yundoc.wpsclient.application.WpsFileListRequest;
+import com.wps.yundoc.wpsclient.application.WpsFileSearchRequest;
 import com.wps.yundoc.wpsclient.application.WpsRequestUploadRequest;
 import com.wps.yundoc.wpsclient.application.WpsUploadFileRequest;
 import com.wps.yundoc.wpsclient.application.WpsUploadInfo;
@@ -32,6 +35,16 @@ class MockWpsFileClientAdapter implements WpsFileClient {
     @Override
     public WpsFileList listFiles(WpsFileListRequest request) {
         return delegate.listFiles(request);
+    }
+
+    @Override
+    public WpsFileList searchFiles(WpsFileSearchRequest request) {
+        return delegate.searchFiles(request);
+    }
+
+    @Override
+    public WpsFileDownloadInfo downloadInfo(WpsFileDownloadRequest request) {
+        return delegate.downloadInfo(request);
     }
 
     @Override

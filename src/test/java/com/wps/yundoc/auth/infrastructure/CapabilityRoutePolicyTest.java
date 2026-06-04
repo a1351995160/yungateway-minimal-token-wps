@@ -40,4 +40,23 @@ class CapabilityRoutePolicyTest {
 
         assertThat(policy.resolve(request)).contains("user-files:view");
     }
+
+    @Test
+    void matchesUserFileSearchDownloadAndUploadRoutes() {
+        CapabilityRoutePolicy policy = new CapabilityRoutePolicy();
+
+        MockHttpServletRequest search = new MockHttpServletRequest("GET", "/gateway/api/v1/user/files/search");
+        search.setContextPath("/gateway");
+        search.setServletPath("/api/v1/user/files/search");
+        MockHttpServletRequest download = new MockHttpServletRequest(
+                "POST",
+                "/api/v1/user/files/file-001;foo=bar/download-url;v=1");
+        download.setServletPath("/api/v1/user/files/file-001;foo=bar/download-url;v=1");
+        MockHttpServletRequest upload = new MockHttpServletRequest("POST", "/api/v1/user/files");
+        upload.setServletPath("/api/v1/user/files");
+
+        assertThat(policy.resolve(search)).contains("user-files:search");
+        assertThat(policy.resolve(download)).contains("user-files:download");
+        assertThat(policy.resolve(upload)).contains("user-files:create");
+    }
 }

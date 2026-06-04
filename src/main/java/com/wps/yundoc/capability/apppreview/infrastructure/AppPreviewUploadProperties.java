@@ -1,5 +1,7 @@
 package com.wps.yundoc.capability.apppreview.infrastructure;
 
+import com.wps.yundoc.capability.upload.application.FileStagingConfiguration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -13,7 +15,7 @@ import java.util.List;
  * @date 2026-06-02 08:53:49
  */
 @ConfigurationProperties(prefix = "yundoc.app-preview-upload")
-public class AppPreviewUploadProperties {
+public class AppPreviewUploadProperties implements FileStagingConfiguration {
 
     private long maxFileSizeBytes = 50L * 1024L * 1024L;
     private int maxFileNameLength = 128;
