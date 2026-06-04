@@ -3,9 +3,10 @@ package com.wps.yundoc.capability.apppreview.application;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * AppPreviewCommand component.
+ * AppPreviewCommand 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class AppPreviewCommand {
 

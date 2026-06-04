@@ -3,9 +3,10 @@ package com.wps.yundoc.credential.api;
 import com.wps.yundoc.credential.domain.WpsAuthorizationLink;
 
 /**
- * WpsAuthorizationLinkResponse component.
+ * WpsAuthorizationLinkResponse 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class WpsAuthorizationLinkResponse {
 

@@ -16,9 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.constraints.NotBlank;
 
 /**
- * WpsOauthCallbackController component.
+ * WpsOauthCallbackController 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @RestController
 @RequestMapping("/api/v1/wps/oauth")

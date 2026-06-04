@@ -16,6 +16,8 @@ import com.wps.yundoc.wpsclient.application.WpsRequestUploadRequest;
 import com.wps.yundoc.wpsclient.application.WpsStoreRequest;
 import com.wps.yundoc.wpsclient.application.WpsUploadFileRequest;
 import com.wps.yundoc.wpsclient.application.WpsUploadInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpEntity;
@@ -33,13 +35,17 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * WpsFileHttpClient component.
+ * WpsFileHttpClient 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class WpsFileHttpClient implements WpsFileClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(WpsFileHttpClient.class);
+
     private static final HttpMethod UPLOAD_METHOD = HttpMethod.PUT;
+    private static final int HASH_PREFIX_LENGTH = 12;
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
@@ -61,66 +67,119 @@ public class WpsFileHttpClient implements WpsFileClient {
 
     @Override
     public WpsFileList listFiles(WpsFileListRequest request) {
-        WpsFileListResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                () -> exchange(request));
-        return toFileList(response);
+        LOGGER.info("WPS请求开始 操作=查询文件列表 父文件ID={} 分页大小={}",
+                request.getParentFileId(),
+                Integer.valueOf(request.getLimit()));
+        WpsFileListResponse response = executeWpsOperation("查询文件列表", () -> exchange(request));
+        WpsFileList fileList = toFileList(response);
+        LOGGER.info("WPS请求结果 操作=查询文件列表 文件数量={} 是否有下一页={}",
+                Integer.valueOf(fileList.getItems().size()),
+                Boolean.valueOf(Texts.hasText(fileList.getNextCursor())));
+        return fileList;
     }
 
     @Override
     public WpsDriveList listDrives(WpsDriveListRequest request) {
-        WpsDriveListResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                () -> exchange(request));
-        return toDriveList(response);
+        LOGGER.info("WPS请求开始 操作=查询空间列表 分页大小={} 是否有分页标识={}",
+                Integer.valueOf(request.getPageSize()),
+                Boolean.valueOf(Texts.hasText(request.getPageToken())));
+        WpsDriveListResponse response = executeWpsOperation("查询空间列表", () -> exchange(request));
+        WpsDriveList driveList = toDriveList(response);
+        LOGGER.info("WPS请求结果 操作=查询空间列表 空间数量={} 是否有下一页={}",
+                Integer.valueOf(driveList.getItems().size()),
+                Boolean.valueOf(Texts.hasText(driveList.getNextPageToken())));
+        return driveList;
     }
 
     @Override
     public WpsDrive createDrive(WpsCreateDriveRequest request) {
-        WpsDriveResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                () -> exchange(request));
-        return toDrive(response);
+        LOGGER.info("WPS请求开始 操作=创建空间 空间名称={} 来源={}",
+                request.getName(),
+                request.getSource());
+        WpsDriveResponse response = executeWpsOperation("创建空间", () -> exchange(request));
+        WpsDrive drive = toDrive(response);
+        LOGGER.info("WPS请求结果 操作=创建空间 空间ID={} 空间名称={}",
+                drive.getDriveId(),
+                drive.getName());
+        return drive;
     }
 
     @Override
     public WpsFileList listChildren(WpsFileChildrenRequest request) {
-        WpsFileListResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                () -> exchange(request));
-        return toFileList(response);
+        LOGGER.info("WPS请求开始 操作=查询子文件 空间ID={} 父文件ID={} 分页大小={}",
+                request.getDriveId(),
+                request.getParentFileId(),
+                Integer.valueOf(request.getPageSize()));
+        WpsFileListResponse response = executeWpsOperation("查询子文件", () -> exchange(request));
+        WpsFileList fileList = toFileList(response);
+        LOGGER.info("WPS请求结果 操作=查询子文件 空间ID={} 父文件ID={} 文件数量={} 是否有下一页={}",
+                request.getDriveId(),
+                request.getParentFileId(),
+                Integer.valueOf(fileList.getItems().size()),
+                Boolean.valueOf(Texts.hasText(fileList.getNextCursor())));
+        return fileList;
     }
 
     @Override
     public WpsFileItem createFolder(WpsCreateFolderRequest request) {
-        WpsFileItemResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                () -> exchange(request));
-        return toFileItem(response);
+        LOGGER.info("WPS请求开始 操作=创建文件夹 空间ID={} 父文件ID={} 文件夹名称={}",
+                request.getDriveId(),
+                request.getParentFileId(),
+                request.getName());
+        WpsFileItemResponse response = executeWpsOperation("创建文件夹", () -> exchange(request));
+        WpsFileItem folder = toFileItem(response);
+        LOGGER.info("WPS请求结果 操作=创建文件夹 空间ID={} 父文件ID={} 文件夹ID={}",
+                request.getDriveId(),
+                request.getParentFileId(),
+                folder.getFileId());
+        return folder;
     }
 
     @Override
     public WpsUploadInfo requestUpload(WpsRequestUploadRequest request) {
-        WpsRequestUploadResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                () -> exchange(request));
-        return toUploadInfo(response);
+        LOGGER.info("WPS请求开始 操作=申请上传信息 空间ID={} 父文件ID={} 文件名={} 文件大小={}",
+                request.getDriveId(),
+                request.getParentFileId(),
+                request.getName(),
+                Long.valueOf(request.getSize()));
+        WpsRequestUploadResponse response = executeWpsOperation("申请上传信息", () -> exchange(request));
+        WpsUploadInfo uploadInfo = toUploadInfo(response);
+        LOGGER.info("WPS请求结果 操作=申请上传信息 空间ID={} 父文件ID={} 上传ID={}",
+                request.getDriveId(),
+                request.getParentFileId(),
+                uploadInfo.getUploadId());
+        return uploadInfo;
     }
 
     @Override
     public void uploadFile(WpsUploadFileRequest request) {
-        WpsClientSupport.executeWithRetry(properties, () -> {
+        LOGGER.info("WPS请求开始 操作=上传实体文件 文件大小={} 文件摘要前缀={} 请求方法={}",
+                Long.valueOf(request.getSize()),
+                sha256Prefix(request.getSha256()),
+                request.getStoreRequest().getMethod());
+        executeWpsOperation("上传实体文件", () -> {
             exchange(request);
             return null;
         });
+        LOGGER.info("WPS请求结果 操作=上传实体文件 文件大小={} 文件摘要前缀={}",
+                Long.valueOf(request.getSize()),
+                sha256Prefix(request.getSha256()));
     }
 
     @Override
     public WpsFileItem commitUpload(WpsCommitUploadRequest request) {
-        WpsFileItemResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                () -> exchange(request));
-        return toFileItem(response);
+        LOGGER.info("WPS请求开始 操作=提交上传完成 空间ID={} 父文件ID={} 上传ID={}",
+                request.getDriveId(),
+                request.getParentFileId(),
+                request.getUploadId());
+        WpsFileItemResponse response = executeWpsOperation("提交上传完成", () -> exchange(request));
+        WpsFileItem fileItem = toFileItem(response);
+        LOGGER.info("WPS请求结果 操作=提交上传完成 空间ID={} 父文件ID={} 上传ID={} WPS文件ID={}",
+                request.getDriveId(),
+                request.getParentFileId(),
+                request.getUploadId(),
+                fileItem.getFileId());
+        return fileItem;
     }
 
     private WpsFileListResponse exchange(WpsFileListRequest request) {
@@ -206,6 +265,23 @@ public class WpsFileHttpClient implements WpsFileClient {
                 HttpMethod.POST,
                 jsonEntity(request.getAccessToken(), url, HttpMethod.POST, payload),
                 WpsFileItemResponse.class).getBody();
+    }
+
+    private <T> T executeWpsOperation(String operation, WpsClientSupport.WpsCall<T> call) {
+        long startedAt = System.nanoTime();
+        try {
+            T result = WpsClientSupport.executeWithRetry(properties, operation, call);
+            LOGGER.info("WPS请求完成 操作={} 耗时毫秒={}",
+                    operation,
+                    Long.valueOf(elapsedMillis(startedAt)));
+            return result;
+        } catch (RuntimeException ex) {
+            LOGGER.error("WPS请求失败 操作={} 耗时毫秒={}",
+                    operation,
+                    Long.valueOf(elapsedMillis(startedAt)),
+                    ex);
+            throw ex;
+        }
     }
 
     private WpsFileList toFileList(WpsFileListResponse response) {
@@ -408,6 +484,7 @@ public class WpsFileHttpClient implements WpsFileClient {
 
     private HttpMethod uploadMethod(WpsStoreRequest storeRequest) {
         if (!UPLOAD_METHOD.name().equalsIgnoreCase(storeRequest.getMethod())) {
+            LOGGER.warn("拒绝WPS上传请求方法 请求方法={}", storeRequest.getMethod());
             throw WpsClientSupport.upstreamError(null);
         }
         return UPLOAD_METHOD;
@@ -416,6 +493,11 @@ public class WpsFileHttpClient implements WpsFileClient {
     private void validateUploadUrl(String url) {
         URI uri = uploadUri(url);
         if (!isAllowedUploadUri(uri)) {
+            LOGGER.warn("拒绝WPS上传地址 主机={} 协议={} 是否包含用户信息={} 是否包含片段={}",
+                    uri.getHost(),
+                    uri.getScheme(),
+                    Boolean.valueOf(uri.getUserInfo() != null),
+                    Boolean.valueOf(uri.getFragment() != null));
             throw WpsClientSupport.upstreamError(null);
         }
     }
@@ -459,5 +541,16 @@ public class WpsFileHttpClient implements WpsFileClient {
             return Collections.singletonList(uploadUri(properties.getBaseUrl()).getHost());
         }
         return suffixes;
+    }
+
+    private String sha256Prefix(String sha256) {
+        if (sha256 == null || sha256.length() <= HASH_PREFIX_LENGTH) {
+            return sha256;
+        }
+        return sha256.substring(0, HASH_PREFIX_LENGTH);
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
     }
 }

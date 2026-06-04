@@ -16,9 +16,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * AuthTokenService component.
+ * AuthTokenService 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Service
 public class AuthTokenService {

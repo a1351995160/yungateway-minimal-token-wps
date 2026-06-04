@@ -10,9 +10,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * LocalWpsTokenCache component.
+ * LocalWpsTokenCache 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component
 public class LocalWpsTokenCache {

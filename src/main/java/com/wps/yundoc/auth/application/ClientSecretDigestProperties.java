@@ -7,9 +7,10 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
 /**
- * ClientSecretDigestProperties component.
+ * ClientSecretDigestProperties 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Validated
 @ConfigurationProperties(prefix = "yundoc.client-secret")

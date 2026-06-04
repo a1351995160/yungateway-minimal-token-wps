@@ -9,9 +9,10 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 /**
- * AppPreviewRequest component.
+ * AppPreviewRequest 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class AppPreviewRequest {
 

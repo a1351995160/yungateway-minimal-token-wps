@@ -4,9 +4,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * YundocReadinessProperties component.
+ * YundocReadinessProperties 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Validated
 @ConfigurationProperties(prefix = "yundoc.readiness")

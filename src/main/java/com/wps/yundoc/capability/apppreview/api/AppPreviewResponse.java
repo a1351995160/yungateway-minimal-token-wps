@@ -3,9 +3,10 @@ package com.wps.yundoc.capability.apppreview.api;
 import com.wps.yundoc.capability.apppreview.application.AppPreviewResult;
 
 /**
- * AppPreviewResponse component.
+ * AppPreviewResponse 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class AppPreviewResponse {
 

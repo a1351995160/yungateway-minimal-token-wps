@@ -3,9 +3,10 @@ package com.wps.yundoc.common.context;
 import com.wps.yundoc.businesssystem.domain.WpsIdentityType;
 
 /**
- * RequestContextBuilder component.
+ * RequestContextBuilder 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class RequestContextBuilder {
 

@@ -4,6 +4,8 @@ import com.wps.yundoc.capability.apppreview.infrastructure.AppPreviewUploadPrope
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
 import com.wps.yundoc.common.util.Texts;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,14 +20,18 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 
 /**
- * AppPreviewFileStagingService component.
+ * AppPreviewFileStagingService 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Service
 public class AppPreviewFileStagingService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AppPreviewFileStagingService.class);
+
     private static final int BUFFER_SIZE = 8192;
+    private static final int HASH_PREFIX_LENGTH = 12;
     private static final char[] HEX = "0123456789abcdef".toCharArray();
 
     private final AppPreviewUploadProperties properties;
@@ -35,11 +41,18 @@ public class AppPreviewFileStagingService {
     }
 
     public StagedAppPreviewFile stage(MultipartFile file, String displayName) {
+        long startedAt = System.nanoTime();
         validateFile(file);
         String fileName = validatedFileName(fileName(file, displayName));
         Path path = tempFile(fileName);
         try {
-            return stageToPath(file, fileName, path);
+            StagedAppPreviewFile stagedFile = stageToPath(file, fileName, path);
+            LOGGER.info("应用预览文件暂存完成 文件名={} 文件大小={} 文件摘要前缀={} 耗时毫秒={}",
+                    stagedFile.getFileName(),
+                    Long.valueOf(stagedFile.getSize()),
+                    sha256Prefix(stagedFile.getSha256()),
+                    Long.valueOf(elapsedMillis(startedAt)));
+            return stagedFile;
         } catch (RuntimeException ex) {
             deleteQuietly(path);
             throw ex;
@@ -200,7 +213,18 @@ public class AppPreviewFileStagingService {
         try {
             Files.deleteIfExists(path);
         } catch (IOException ex) {
-            // Best effort cleanup after a validation/staging failure.
+            LOGGER.warn("应用预览临时文件删除失败 文件路径={}", path, ex);
         }
+    }
+
+    private String sha256Prefix(String sha256) {
+        if (sha256 == null || sha256.length() <= HASH_PREFIX_LENGTH) {
+            return sha256;
+        }
+        return sha256.substring(0, HASH_PREFIX_LENGTH);
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
     }
 }

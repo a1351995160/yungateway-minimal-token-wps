@@ -3,9 +3,10 @@ package com.wps.yundoc.wpsclient.application;
 import java.nio.file.Path;
 
 /**
- * WpsUploadFileRequest component.
+ * WpsUploadFileRequest 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class WpsUploadFileRequest {
 

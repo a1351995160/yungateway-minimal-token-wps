@@ -3,9 +3,10 @@ package com.wps.yundoc.capability.userfile.api;
 import com.wps.yundoc.wpsclient.application.WpsFileItem;
 
 /**
- * UserFileItemResponse component.
+ * UserFileItemResponse 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class UserFileItemResponse extends UserFileResponse {
 

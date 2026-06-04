@@ -8,9 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * UserAssertionNonceCache component.
+ * UserAssertionNonceCache 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component
 public class UserAssertionNonceCache {

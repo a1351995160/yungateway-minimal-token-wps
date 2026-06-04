@@ -16,9 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * AppPreviewController component.
+ * AppPreviewController 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @RestController
 @RequestMapping("/api/v1/app")

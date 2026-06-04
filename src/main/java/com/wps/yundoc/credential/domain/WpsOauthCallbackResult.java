@@ -1,9 +1,10 @@
 package com.wps.yundoc.credential.domain;
 
 /**
- * WpsOauthCallbackResult component.
+ * WpsOauthCallbackResult 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class WpsOauthCallbackResult {
 

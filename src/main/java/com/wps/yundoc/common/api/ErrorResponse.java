@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Map;
 
 /**
- * ErrorResponse component.
+ * ErrorResponse 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse {

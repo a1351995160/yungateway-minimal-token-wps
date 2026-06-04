@@ -1,21 +1,22 @@
 package com.wps.yundoc.auth.infrastructure;
 
 /**
- * RouteMatchType component.
+ * RouteMatchType 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 enum RouteMatchType {
     /**
-     * Matches the complete request path.
+     * 匹配完整请求路径。
      */
     EXACT,
     /**
-     * Matches request paths with the configured prefix.
+     * 按配置前缀匹配请求路径。
      */
     PREFIX,
     /**
-     * Matches request paths with the configured suffix.
+     * 按配置后缀匹配请求路径。
      */
     SUFFIX
 }

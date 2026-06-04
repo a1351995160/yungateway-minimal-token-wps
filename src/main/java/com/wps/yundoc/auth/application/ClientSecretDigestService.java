@@ -10,9 +10,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
 /**
- * ClientSecretDigestService component.
+ * ClientSecretDigestService 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Service
 public class ClientSecretDigestService {

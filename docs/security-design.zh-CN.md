@@ -2,7 +2,7 @@
 
 ## 安全边界
 
-本服务是服务端到服务端网关，不面向浏览器或移动端直接开放能力 API。业务系统 JWT、WPS app token、WPS user token、appSecret 等敏感材料不得下发到不可信客户端。
+本服务是服务端到服务端网关，不面向浏览器或移动端直接开放对外接口。业务系统 JWT、WPS app token、WPS user token、appSecret 等敏感材料不得下发到不可信客户端。
 
 ## 认证
 
@@ -11,14 +11,15 @@
 1. `clientId` 查询 `biz_system`。
 2. 校验业务系统状态为 `ENABLED`。
 3. 使用 `ClientSecretDigestService` 校验 `clientSecret` 摘要。
-4. 使用 `JwtService` 签发 HS256 JWT。
-5. JWT 携带 `businessSystemId`、`clientId`、`identityType`、`jti`、`tokenVersion`、`permissionVersion`、`iat`、`exp`；USER JWT 额外携带 `userId`。
+4. USER 访问令牌签发时，额外校验用户断言签名、时间戳和 nonce。
+5. 使用 `JwtService` 签发 HS256 JWT。
+6. JWT 携带 `businessSystemId`、`clientId`、`identityType`、`jti`、`tokenVersion`、`permissionVersion`、`iat`、`exp`；USER JWT 额外携带 `userId`。
 
 JWT 校验包括格式、签名、issuer、audience、typ 和过期时间。
 
 ## 鉴权
 
-能力 API 通过 `CapabilityRoutePolicy` 映射到 API code，然后由 `BusinessSystemApiPermissionService` 校验：
+对外接口通过 `CapabilityRoutePolicy` 映射到 API code，然后由 `BusinessSystemApiPermissionService` 校验：
 
 - 业务系统存在。
 - 业务系统未禁用。
@@ -34,6 +35,7 @@ JWT 校验包括格式、签名、issuer、audience、typ 和过期时间。
 
 - APP JWT 表示业务系统身份，用于文件预览等应用级接口，不携带 `userId`。APP 文件预览按 `businessSystemId` 隔离 WPS 文件夹。
 - USER JWT 表示业务系统加当前业务用户身份，用于 WPS 用户授权和用户文件接口，必须携带 `userId`。
+- USER JWT 签发时必须通过用户断言签名校验，签名输入绑定请求方法、路径、query、`businessSystemId`、`clientId`、`userId`、时间戳和 nonce。
 - `JwtAuthenticationFilter` 会根据当前 API code 校验 JWT 的 `identityType`，避免 APP token 和 USER token 混用。
 - USER 文件列表从 JWT 中读取 `userId`。兼容期如果 query 仍传 `userId`，只能与 JWT 中的 `userId` 做一致性校验，不能决定实际操作用户。
 
@@ -56,6 +58,7 @@ JWT 校验包括格式、签名、issuer、audience、typ 和过期时间。
 主要边界校验：
 
 - Token 请求字段必填并限制长度。
+- USER token 请求必须携带 `X-Yundoc-User-Id`、`X-Yundoc-User-Timestamp`、`X-Yundoc-User-Nonce`、`X-Yundoc-User-Signature`，并通过时间窗口和 nonce 重放校验。
 - APP 预览文件必须非空，文件名不能包含 `..`、`/`、`\` 或空字符，扩展名必须在允许列表内。
 - APP 预览单文件大小受 `yundoc.app-preview-upload.max-file-size-bytes` 限制，服务端使用受控临时文件暂存，不把完整文件一次性读入 Java 堆内存。
 - APP 预览有效期限制在 60 到 86400 秒。
@@ -74,6 +77,7 @@ JWT 校验包括格式、签名、issuer、audience、typ 和过期时间。
 - 预览 URL host 必须在白名单中，默认回落到 WPS base URL 的 host。
 - 预览 URL 过期时间不能超过请求有效期加 30 秒容忍窗口。
 - WPS `request_upload` 返回的实体上传地址会当作不可信输入处理：必须是 HTTPS，不允许 userInfo 和 fragment，host 必须命中上传地址后缀白名单。
+- WPS `request_upload` 返回的实体上传方法只允许 `PUT`，其他 method 会被拒绝，避免信任上游返回的任意 HTTP 方法。
 - 实体文件上传禁止自动跟随重定向，避免被 30x 引导到非 WPS 地址。
 - WPS 原始错误统一映射为 `WPS_UPSTREAM_ERROR`。
 

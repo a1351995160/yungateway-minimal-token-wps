@@ -4,9 +4,10 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
 /**
- * TokenRequest component.
+ * TokenRequest 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class TokenRequest {
 

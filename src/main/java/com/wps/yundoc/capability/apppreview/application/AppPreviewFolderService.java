@@ -16,6 +16,8 @@ import com.wps.yundoc.wpsclient.application.WpsFileChildrenRequest;
 import com.wps.yundoc.wpsclient.application.WpsFileClient;
 import com.wps.yundoc.wpsclient.application.WpsFileItem;
 import com.wps.yundoc.wpsclient.application.WpsFileList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -24,12 +26,15 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 
 /**
- * AppPreviewFolderService component.
+ * AppPreviewFolderService 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Service
 public class AppPreviewFolderService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AppPreviewFolderService.class);
 
     private static final String DRIVE_STATUS_INUSE = "inuse";
     private static final int FOLDER_HASH_LENGTH = 12;
@@ -49,21 +54,35 @@ public class AppPreviewFolderService {
     }
 
     public synchronized AppPreviewFolder ensureFolder(String businessSystemId, String accessToken) {
+        long startedAt = System.nanoTime();
+        logEnsureFolderStarted(businessSystemId);
         WpsDrive drive = resolveDrive(accessToken);
         AppPreviewFolderPO existing = folderMapper.selectByBusinessSystemIdAndDriveId(
                 businessSystemId,
                 drive.getDriveId());
         if (existing != null) {
+            logFolderReused(businessSystemId, existing, elapsedMillis(startedAt));
             return folder(existing);
         }
-        return createOrRecoverFolder(businessSystemId, accessToken, drive);
+        AppPreviewFolder folder = createOrRecoverFolder(businessSystemId, accessToken, drive);
+        logFolderPrepared(businessSystemId, folder, elapsedMillis(startedAt));
+        return folder;
     }
 
     private AppPreviewFolder createOrRecoverFolder(String businessSystemId, String accessToken, WpsDrive drive) {
         String folderName = folderName(businessSystemId);
         WpsFileItem folder = findFolder(accessToken, drive.getDriveId(), folderName);
         if (folder == null) {
+            LOGGER.info("开始创建WPS应用预览文件夹 业务系统ID={} 空间ID={} 文件夹名称={}",
+                    businessSystemId,
+                    drive.getDriveId(),
+                    folderName);
             folder = createFolder(accessToken, drive.getDriveId(), folderName);
+        } else {
+            LOGGER.info("已找到WPS应用预览文件夹 业务系统ID={} 空间ID={} 文件夹ID={}",
+                    businessSystemId,
+                    drive.getDriveId(),
+                    folder.getFileId());
         }
         saveFolder(businessSystemId, drive.getDriveId(), folder);
         return new AppPreviewFolder(drive.getDriveId(), folder.getFileId(), folder.getName());
@@ -75,6 +94,7 @@ public class AppPreviewFolderService {
         }
         WpsDrive drive = findDrive(accessToken);
         if (drive != null) {
+            LOGGER.info("已找到WPS应用空间 空间ID={} 空间名称={}", drive.getDriveId(), drive.getName());
             return drive;
         }
         return createDrive(accessToken);
@@ -113,13 +133,18 @@ public class AppPreviewFolderService {
 
     private WpsDrive createDrive(String accessToken) {
         if (!properties.isAutoCreateDrive()) {
+            LOGGER.warn("WPS应用空间未初始化且禁止自动创建 空间名称={}",
+                    properties.getDriveName());
             throw new YundocException(YundocErrorCode.WPS_UPSTREAM_ERROR, "WPS app drive is not initialized");
         }
-        return fileClient.createDrive(new WpsCreateDriveRequest(
+        LOGGER.info("开始创建WPS应用空间 空间名称={}", properties.getDriveName());
+        WpsDrive drive = fileClient.createDrive(new WpsCreateDriveRequest(
                 accessToken,
                 properties.getDriveName(),
                 properties.getDriveSource(),
                 properties.getDriveTotalQuota()));
+        LOGGER.info("WPS应用空间创建完成 空间ID={} 空间名称={}", drive.getDriveId(), drive.getName());
+        return drive;
     }
 
     private WpsFileItem findFolder(String accessToken, String driveId, String folderName) {
@@ -163,10 +188,34 @@ public class AppPreviewFolderService {
         po.setFolderId(folder.getFileId());
         po.setFolderName(folder.getName());
         folderMapper.upsert(po);
+        LOGGER.info("应用预览文件夹映射已保存 业务系统ID={} 空间ID={} 文件夹ID={}",
+                businessSystemId,
+                driveId,
+                folder.getFileId());
     }
 
     private AppPreviewFolder folder(AppPreviewFolderPO po) {
         return new AppPreviewFolder(po.getDriveId(), po.getFolderId(), po.getFolderName());
+    }
+
+    private void logEnsureFolderStarted(String businessSystemId) {
+        LOGGER.info("开始确认应用预览文件夹 业务系统ID={}", businessSystemId);
+    }
+
+    private void logFolderReused(String businessSystemId, AppPreviewFolderPO existing, long elapsedMillis) {
+        LOGGER.info("复用应用预览文件夹 业务系统ID={} 空间ID={} 文件夹ID={} 耗时毫秒={}",
+                businessSystemId,
+                existing.getDriveId(),
+                existing.getFolderId(),
+                Long.valueOf(elapsedMillis));
+    }
+
+    private void logFolderPrepared(String businessSystemId, AppPreviewFolder folder, long elapsedMillis) {
+        LOGGER.info("应用预览文件夹准备完成 业务系统ID={} 空间ID={} 文件夹ID={} 耗时毫秒={}",
+                businessSystemId,
+                folder.getDriveId(),
+                folder.getFolderId(),
+                Long.valueOf(elapsedMillis));
     }
 
     private String folderName(String businessSystemId) {
@@ -200,5 +249,9 @@ public class AppPreviewFolderService {
             result[index * 2 + 1] = HEX[value & 0x0f];
         }
         return new String(result);
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
     }
 }

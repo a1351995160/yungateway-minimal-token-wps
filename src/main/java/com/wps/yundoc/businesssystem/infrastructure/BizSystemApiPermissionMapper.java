@@ -6,29 +6,30 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * BizSystemApiPermissionMapper component.
+ * BizSystemApiPermissionMapper 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Mapper
 public interface BizSystemApiPermissionMapper {
 
     /**
-     * Selects one permission row by business system id and API code.
+     * 根据业务系统 ID 和 API 编码查询单条权限记录。
      *
-     * @param businessSystemId business system id
-     * @param apiCode API code
-     * @return matching permission row, or null when absent
+     * @param businessSystemId 业务系统 ID
+     * @param apiCode API 编码
+     * @return 匹配的权限记录，不存在时返回 null
      */
     BizSystemApiPermissionPO selectByBusinessSystemIdAndApiCode(
             @Param("businessSystemId") String businessSystemId,
             @Param("apiCode") String apiCode);
 
     /**
-     * Selects all permission rows for a business system.
+     * 查询业务系统的全部权限记录。
      *
-     * @param businessSystemId business system id
-     * @return permission rows for the business system
+     * @param businessSystemId 业务系统 ID
+     * @return 业务系统的权限记录列表
      */
     List<BizSystemApiPermissionPO> selectByBusinessSystemId(
             @Param("businessSystemId") String businessSystemId);

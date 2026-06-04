@@ -3,9 +3,10 @@ package com.wps.yundoc.credential.domain;
 import java.time.OffsetDateTime;
 
 /**
- * OauthState component.
+ * OauthState 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class OauthState {
 

@@ -7,9 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * WpsClientProperties component.
+ * WpsClientProperties 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @ConfigurationProperties(prefix = "yundoc.wps-client")
 public class WpsClientProperties {

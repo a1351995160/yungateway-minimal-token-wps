@@ -6,9 +6,10 @@ import com.wps.yundoc.wpsclient.application.WpsFileList;
 import java.util.List;
 
 /**
- * UserFileListResult component.
+ * UserFileListResult 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class UserFileListResult {
 

@@ -6,9 +6,10 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Objects;
 
 /**
- * CapabilityRouteRule component.
+ * CapabilityRouteRule 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 class CapabilityRouteRule {
 

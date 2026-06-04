@@ -19,9 +19,10 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * UserFileController component.
+ * UserFileController 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @RestController
 @RequestMapping("/api/v1/user/files")

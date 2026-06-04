@@ -8,9 +8,10 @@ import javax.validation.constraints.Size;
 import java.time.Duration;
 
 /**
- * JwtProperties component.
+ * JwtProperties 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Validated
 @ConfigurationProperties(prefix = "yundoc.jwt")

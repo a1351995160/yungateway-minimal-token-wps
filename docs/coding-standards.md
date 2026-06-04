@@ -48,7 +48,7 @@ src/
 - Spring `@Transactional` 只放在 application service 或专用事务服务上，不放在 Controller、Mapper 或 Domain 对象上。
 - 包含 WPS HTTP 调用的流程不得用一个数据库事务包住全链路，必须拆成本地状态准备、外部调用、本地状态收尾。
 - 请求上下文通过 Filter/Interceptor 构建为 `RequestContext`，业务代码不得散落读取 HTTP header。
-- USER 模式能力 API 必须在进入 application service 前校验 `X-Operator-Id`。
+- USER 模式接口必须在进入 application service 前完成 JWT 身份类型校验，并从 USER JWT 中读取 `userId`；普通 query 参数不能决定实际操作用户。
 - 由于 Spring Boot 2.7.x 仍处于 `javax.*` 时代，不引入只支持 `jakarta.*` 的 Spring Boot 3+ 依赖版本。
 
 ## 依赖与代码生成规范
@@ -121,7 +121,7 @@ src/
 
 ## 安全规范
 
-- 第一版能力 API 的主鉴权方式是内部 JWT；API Key 只用于业务系统换取 JWT 或运维兜底，不能直接访问云文档能力。
+- 第一版对外接口的主鉴权方式是内部 JWT；API Key 或 client secret 只用于业务系统换取 JWT 或运维兜底，不能直接访问云文档接口。
 - 授权检查必须基于业务系统、WPS/company 标识、WPS 授权模式、USER 模式下的操作人、WPS 凭证主体、drive/file 范围和操作类型。
 - 所有入参使用 Bean Validation 或显式 schema 校验。
 - 查询参数使用白名单映射，禁止把 `Map<String, String>` 原样转发给 WPS。

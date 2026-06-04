@@ -14,9 +14,10 @@ import java.net.URISyntaxException;
 import java.util.Map;
 
 /**
- * WpsSignedRequestSupport component.
+ * WpsSignedRequestSupport 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 final class WpsSignedRequestSupport {
 

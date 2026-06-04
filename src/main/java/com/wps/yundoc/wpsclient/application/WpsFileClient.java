@@ -1,72 +1,73 @@
 package com.wps.yundoc.wpsclient.application;
 
 /**
- * WpsFileClient component.
+ * WpsFileClient 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public interface WpsFileClient {
 
     /**
-     * Lists files from WPS for the request context.
+     * 按请求上下文查询 WPS 文件列表。
      *
-     * @param request file list request
-     * @return file list
+     * @param request 文件列表请求
+     * @return 文件列表
      */
     WpsFileList listFiles(WpsFileListRequest request);
 
     /**
-     * Lists WPS drives for the current identity.
+     * 查询当前身份下的 WPS 空间列表。
      *
-     * @param request drive list request
-     * @return drive list
+     * @param request 空间列表请求
+     * @return 空间列表
      */
     WpsDriveList listDrives(WpsDriveListRequest request);
 
     /**
-     * Creates a WPS drive.
+     * 创建 WPS 空间。
      *
-     * @param request create drive request
-     * @return created drive
+     * @param request 创建空间请求
+     * @return 已创建的空间
      */
     WpsDrive createDrive(WpsCreateDriveRequest request);
 
     /**
-     * Lists child files under a WPS folder.
+     * 查询 WPS 文件夹下的子文件。
      *
-     * @param request child file list request
-     * @return child file list
+     * @param request 子文件列表请求
+     * @return 子文件列表
      */
     WpsFileList listChildren(WpsFileChildrenRequest request);
 
     /**
-     * Creates a WPS folder.
+     * 创建 WPS 文件夹。
      *
-     * @param request create folder request
-     * @return created folder
+     * @param request 创建文件夹请求
+     * @return 已创建的文件夹
      */
     WpsFileItem createFolder(WpsCreateFolderRequest request);
 
     /**
-     * Requests WPS upload information.
+     * 请求 WPS 上传信息。
      *
-     * @param request upload request
-     * @return upload information
+     * @param request 上传请求
+     * @return 上传信息
      */
     WpsUploadInfo requestUpload(WpsRequestUploadRequest request);
 
     /**
-     * Uploads entity bytes to the WPS storage URL.
+     * 将实体文件上传到 WPS 存储地址。
      *
-     * @param request entity upload request
+     * @param request 实体上传请求
      */
     void uploadFile(WpsUploadFileRequest request);
 
     /**
-     * Commits a WPS upload.
+     * 提交 WPS 上传完成。
      *
-     * @param request commit upload request
-     * @return committed WPS file
+     * @param request 提交上传请求
+     * @return 已提交的 WPS 文件
      */
     WpsFileItem commitUpload(WpsCommitUploadRequest request);
 }

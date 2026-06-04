@@ -10,9 +10,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * CapabilityRoutePolicy component.
+ * CapabilityRoutePolicy 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component
 @SuppressWarnings("java:S1075")

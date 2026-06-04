@@ -19,9 +19,10 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * WPS request signature helper.
+ * WPS 请求签名辅助组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class WpsRequestSigner {
 

@@ -19,9 +19,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * JwtService component.
+ * JwtService 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Service
 public class JwtService {

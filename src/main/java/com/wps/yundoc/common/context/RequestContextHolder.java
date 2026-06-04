@@ -3,9 +3,10 @@ package com.wps.yundoc.common.context;
 import java.util.Optional;
 
 /**
- * RequestContextHolder component.
+ * RequestContextHolder 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public final class RequestContextHolder {
 

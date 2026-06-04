@@ -2,6 +2,8 @@ package com.wps.yundoc.auth.application;
 
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -10,12 +12,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * AuthTokenRateLimiter component.
+ * AuthTokenRateLimiter 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component
 public class AuthTokenRateLimiter {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthTokenRateLimiter.class);
 
     private static final String UNKNOWN_KEY = "unknown";
 
@@ -76,6 +81,9 @@ public class AuthTokenRateLimiter {
         if (bucketAllowed(bucket, maxFailures)) {
             return;
         }
+        LOGGER.warn("令牌申请触发限流 限流键={} 最大失败次数={}",
+                key,
+                Integer.valueOf(maxFailures));
         throw new YundocException(YundocErrorCode.RATE_LIMIT_EXCEEDED);
     }
 
@@ -114,8 +122,14 @@ public class AuthTokenRateLimiter {
         cleanupIfNeeded(failures, now);
         failures.compute(key, (failureKey, bucket) -> {
             if (bucket == null || bucket.isExpired(now, windowMillis())) {
+                LOGGER.warn("令牌申请失败次数已记录 限流键={} 失败次数={}",
+                        failureKey,
+                        Integer.valueOf(1));
                 return new AttemptBucket(now, 1);
             }
+            LOGGER.warn("令牌申请失败次数已记录 限流键={} 失败次数={}",
+                    failureKey,
+                    Integer.valueOf(bucket.getFailures() + 1));
             return bucket.incremented();
         });
     }

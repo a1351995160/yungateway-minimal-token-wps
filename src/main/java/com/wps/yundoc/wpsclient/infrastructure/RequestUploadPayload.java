@@ -6,9 +6,10 @@ import com.wps.yundoc.wpsclient.application.WpsUploadHash;
 import java.util.List;
 
 /**
- * RequestUploadPayload component.
+ * RequestUploadPayload 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 class RequestUploadPayload {
 

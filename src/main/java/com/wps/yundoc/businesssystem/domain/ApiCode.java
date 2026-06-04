@@ -4,49 +4,50 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * ApiCode component.
+ * ApiCode 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public enum ApiCode {
     /**
-     * Creates an application preview link.
+     * 创建应用预览链接。
      */
     APP_PREVIEW_CREATE("app-preview:create", WpsIdentityType.APP),
     /**
-     * Lists user files.
+     * 查询用户文件列表。
      */
     USER_FILES_LIST("user-files:list", WpsIdentityType.USER),
     /**
-     * Renames user files.
+     * 重命名用户文件。
      */
     USER_FILES_RENAME("user-files:rename", WpsIdentityType.USER),
     /**
-     * Downloads user files.
+     * 下载用户文件。
      */
     USER_FILES_DOWNLOAD("user-files:download", WpsIdentityType.USER),
     /**
-     * Renames user folders.
+     * 重命名用户文件夹。
      */
     USER_FOLDERS_RENAME("user-folders:rename", WpsIdentityType.USER),
     /**
-     * Creates user files.
+     * 创建用户文件。
      */
     USER_FILES_CREATE("user-files:create", WpsIdentityType.USER),
     /**
-     * Saves user files as a new file.
+     * 将用户文件另存为新文件。
      */
     USER_FILES_SAVE_AS("user-files:save-as", WpsIdentityType.USER),
     /**
-     * Views user files.
+     * 查看用户文件。
      */
     USER_FILES_VIEW("user-files:view", WpsIdentityType.USER),
     /**
-     * Deletes user files.
+     * 删除用户文件。
      */
     USER_FILES_DELETE("user-files:delete", WpsIdentityType.USER),
     /**
-     * Updates user files.
+     * 更新用户文件。
      */
     USER_FILES_UPDATE("user-files:update", WpsIdentityType.USER);
 
