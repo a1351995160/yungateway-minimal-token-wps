@@ -4,12 +4,12 @@
 
 本服务是业务系统访问 WPS OpenAPI 的服务端中转层。业务系统不直接保存或使用 WPS 的 `client_secret`、`access_token`、`refresh_token`，而是先调用本服务获取内部 JWT，再通过本服务访问 WPS。
 
-当前实现中，APP 场景和 USER 场景都使用同一个业务系统 JWT。USER 场景额外依赖 `userId` 参数和用户断言签名来防止篡改。经过需求确认后，新的目标是把两类授权身份分清楚：
+早期实现中，APP 场景和 USER 场景容易混用同一个业务系统 JWT。USER 场景额外依赖普通 `userId` 参数和用户断言签名来防止篡改。经过需求确认后，新的目标是把两类授权身份分清楚：
 
 - APP 场景：代表业务系统调用 WPS 应用级接口。
 - USER 场景：代表业务系统下的某个用户调用 WPS 用户级接口。
 
-这样业务系统在调用用户相关接口前，需要先为该用户获取一个绑定 `userId` 的内部 JWT，再使用这个 JWT 完成 WPS 用户授权和后续用户文件访问。
+这样业务系统在调用用户相关接口前，需要先为该用户获取一个绑定 `userId` 的内部 JWT。获取 USER JWT 时需要携带用户断言签名；后续使用这个 JWT 完成 WPS 用户授权和用户文件访问时，服务端以 JWT 中的 `userId` 为准。
 
 ## 2. 目标
 
@@ -27,8 +27,8 @@
 
 | 类型 | 使用场景 | 是否绑定用户 | 允许调用 |
 | --- | --- | --- | --- |
-| `APP` | 文件预览等应用级接口 | 否 | APP 类型能力接口 |
-| `USER` | 用户授权、用户文件列表等用户级接口 | 是 | USER 类型能力接口 |
+| `APP` | 文件预览等应用级接口 | 否 | APP 类型接口 |
+| `USER` | 用户授权、用户文件列表等用户级接口 | 是 | USER 类型接口 |
 
 `APP` JWT 表达的是业务系统身份。`USER` JWT 表达的是业务系统身份加当前业务用户身份。
 
@@ -54,15 +54,19 @@ sequenceDiagram
 
     B->>G: POST /api/v1/auth/token(identityType=APP)
     G-->>B: 返回 APP JWT
-    B->>G: POST /api/v1/app/previews + APP JWT
+    B->>G: POST /api/v1/app/previews 上传文件流 + APP JWT
     G->>G: 校验 JWT 和 app-preview:create 权限
     G->>W: client_credentials 获取或复用 WPS app token
-    G->>W: 使用 WPS app token 创建预览链接
+    G->>W: 查找或创建业务系统文件夹
+    G->>W: request_upload 请求上传信息
+    G->>W: PUT 上传实体文件
+    G->>W: commit_upload 提交上传完成
+    G->>W: 使用 WPS fileId 创建预览链接
     W-->>G: previewUrl, expireAt
     G-->>B: 返回预览链接
 ```
 
-APP 链路不绑定 `userId`。业务系统不需要因为不同用户查看预览而重新获取 APP JWT。
+APP 链路不绑定 `userId`。业务系统不需要因为不同用户查看预览而重新获取 APP JWT。文件预览接口不接收业务系统传入的 WPS `fileId`，而是由本服务完成文件上传后取得 WPS `fileId`。
 
 ### 4.2 USER 用户授权链路
 
@@ -73,7 +77,8 @@ sequenceDiagram
     participant G as 本服务
     participant W as WPS OpenAPI
 
-    B->>G: POST /api/v1/auth/token(identityType=USER, userId)
+    B->>G: POST /api/v1/auth/token(identityType=USER, userId, 用户断言签名)
+    G->>G: 校验用户断言签名、时间戳和 nonce
     G-->>B: 返回绑定 userId 的 USER JWT
     B->>G: GET /api/v1/wps/oauth/authorize-url + USER JWT
     G->>G: 生成一次性 state，绑定 businessSystemId/clientId/userId
@@ -145,10 +150,20 @@ USER 请求示例：
 }
 ```
 
+USER 请求还必须携带用户断言请求头：
+
+| Header | 说明 |
+| --- | --- |
+| `X-Yundoc-User-Id` | 必须与请求体 `userId` 一致。 |
+| `X-Yundoc-User-Timestamp` | Unix 秒级时间戳，必须在允许时间窗口内。 |
+| `X-Yundoc-User-Nonce` | 一次性随机串，同一业务系统窗口内不可重复。 |
+| `X-Yundoc-User-Signature` | 用户断言签名，防止伪造和重放 USER JWT 签发请求。 |
+
 兼容要求：
 
 - 不传 `identityType` 时默认按 `APP` 处理，避免破坏已有 APP 接入。
 - `identityType=USER` 时 `userId` 必填。
+- `identityType=USER` 时用户断言签名必须校验通过。
 - `identityType=APP` 时不允许把 `userId` 写入 JWT。
 - 返回中需要包含 `identityType`，USER token 返回中可以包含 `userId`，便于业务系统排查。
 
@@ -186,7 +201,34 @@ WPS app token 按 WPS OAuth token 接口实现：
 
 服务端应缓存未过期的 app token，不应每次 APP 接口都重新向 WPS 获取。
 
-### 5.4 WPS 用户授权链接
+### 5.4 APP 文件上传预览
+
+APP 文件预览接口：
+
+```http
+POST /api/v1/app/previews
+Authorization: Bearer <APP JWT>
+Content-Type: multipart/form-data
+```
+
+表单字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `file` | 必填，业务系统上传的待预览文件流。 |
+| `displayName` | 选填，展示文件名；不传时使用上传文件原始名。 |
+| `expireSeconds` | 选填，预览链接有效期，默认 3600 秒，范围 60 到 86400 秒。 |
+
+服务端处理规则：
+
+- 校验文件非空、文件名安全、扩展名允许、大小在限制内。
+- 将文件流分块写入临时文件，同时计算文件大小和 `sha256`。
+- 使用 WPS app token 查询或创建应用盘文件夹，并按业务系统隔离。
+- 调用 WPS `request_upload`、实体文件 `PUT` 上传、`commit_upload`。
+- 使用提交上传后得到的 WPS `fileId` 创建预览链接。
+- 校验 WPS 返回的上传地址、上传 method、预览链接协议、预览链接域名和过期时间。
+
+### 5.5 WPS 用户授权链接
 
 服务需要提供明确的授权链接获取接口，例如：
 
@@ -216,7 +258,7 @@ Authorization: Bearer <USER JWT>
 
 `state` 必须绑定 `businessSystemId`、`clientId`、`userId`、过期时间，并且只能使用一次。
 
-### 5.5 WPS 用户 token 换取
+### 5.6 WPS 用户 token 换取
 
 WPS 回调接口：
 
@@ -234,7 +276,7 @@ GET /api/v1/wps/oauth/callback?code=<code>&state=<state>
 - 请求体为 `grant_type=authorization_code&client_id=...&client_secret=...&code=...&redirect_uri=...`。
 - 成功后保存 `access_token`、`expires_in`、`refresh_token`、`refresh_expires_in`、`token_type`。
 
-### 5.6 WPS 用户 token 刷新
+### 5.7 WPS 用户 token 刷新
 
 USER 接口调用前，如果 WPS user access token 即将过期，服务端应优先使用 refresh token 刷新：
 
@@ -252,9 +294,9 @@ USER 接口调用前，如果 WPS user access token 即将过期，服务端应�
 
 刷新失败或 refresh token 已过期时，服务返回 `REAUTH_REQUIRED`，引导业务系统重新走授权链接。
 
-### 5.7 USER 能力接口
+### 5.8 USER 接口
 
-USER 能力接口必须使用 USER JWT。以文件列表为例：
+USER 接口必须使用 USER JWT。以文件列表为例：
 
 ```http
 GET /api/v1/user/files?parentFileId=root&limit=50
@@ -265,7 +307,7 @@ Authorization: Bearer <USER JWT>
 
 - 服务端从 JWT 读取 `userId`。
 - 如果请求仍传入 `userId`，只能用于兼容期校验，必须与 JWT 中 `userId` 一致。
-- 新文档和新客户端不再要求用户断言签名。
+- USER 文件接口调用阶段不再要求每次携带用户断言签名；用户断言签名只用于 USER JWT 签发阶段。
 - APP JWT 调 USER 接口必须拒绝。
 - USER JWT 调 APP 接口默认拒绝，除非后续明确放开。
 
@@ -309,7 +351,6 @@ Authorization: Bearer <USER JWT>
 - 业务系统前端页面如何展示授权按钮。
 - WPS 授权完成后的业务系统跳转页面定制。
 - 多租户下同名 `userId` 的企业隔离模型，除非确认 `userId` 不是全局唯一。
-- 文件流上传到 WPS 后再预览的完整链路。
 - WPS 应用市场 ISV 专用授权接口。
 
 ## 10. 参考资料

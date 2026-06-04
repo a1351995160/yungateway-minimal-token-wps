@@ -1,16 +1,17 @@
 package com.wps.yundoc.wpsclient.application;
 
 /**
- * WpsAppTokenClient component.
+ * WpsAppTokenClient 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public interface WpsAppTokenClient {
 
     /**
-     * Issues an application access token from WPS.
+     * 从 WPS 签发应用访问令牌。
      *
-     * @return application token
+     * @return 应用令牌
      */
     WpsAppToken issueAppToken();
 }

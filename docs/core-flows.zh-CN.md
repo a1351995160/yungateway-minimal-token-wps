@@ -8,6 +8,7 @@ sequenceDiagram
     participant A as AuthController
     participant L as AuthTokenRateLimiter
     participant S as AuthTokenService
+    participant U as UserAssertionVerifier
     participant D as 数据库
     participant J as JwtService
 
@@ -20,6 +21,10 @@ sequenceDiagram
     S->>J: issue(principal, ttl)
     J-->>S: JWT
     S-->>A: AuthToken
+    opt identityType=USER
+        A->>U: verify(request, userId)
+        U->>U: 校验 userId、timestamp、nonce、signature
+    end
     A->>L: recordSuccess(clientId)
     A-->>B: accessToken, identityType, userId, expiresIn, permissions
 ```
@@ -28,11 +33,13 @@ sequenceDiagram
 
 - `clientId/clientSecret` 错误返回 `TOKEN_INVALID`。
 - `identityType` 不传时默认签发 APP JWT；传 `USER` 时必须带 `userId`。
+- `identityType=USER` 时必须携带用户断言请求头：`X-Yundoc-User-Id`、`X-Yundoc-User-Timestamp`、`X-Yundoc-User-Nonce`、`X-Yundoc-User-Signature`。
+- USER 断言签名绑定请求方法、路径、query、`businessSystemId`、`clientId`、`userId`、时间戳和 nonce。
 - 业务系统禁用返回 `BUSINESS_SYSTEM_DISABLED`。
 - 认证失败会进入应用层限流计数。
 - 超过限流阈值返回 `RATE_LIMIT_EXCEEDED`。
 
-## 能力 API 认证鉴权
+## 对外接口认证鉴权
 
 ```mermaid
 sequenceDiagram
@@ -103,7 +110,7 @@ sequenceDiagram
     W->>O: POST request_upload
     O-->>W: uploadId, storeRequest
     S->>W: uploadFile(storeRequest, tempFile)
-    W->>U: PUT/POST 文件流
+    W->>U: PUT 文件流
     S->>W: commitUpload(uploadId)
     W->>O: POST commit_upload
     O-->>W: WPS fileId
@@ -115,7 +122,7 @@ sequenceDiagram
     C-->>B: ApiResponse
 ```
 
-APP 文件预览不再要求业务系统提前提供 WPS `fileId`。服务端会使用 APP token 完成 WPS 应用盘发现、业务系统文件夹准备、三段式上传和预览链接创建。上传前会把文件暂存到受控临时文件，计算大小和 `sha256`，避免把完整文件一次性放进 Java 堆内存。
+APP 文件预览不再要求业务系统提前提供 WPS `fileId`。服务端会使用 APP token 完成 WPS 应用盘发现、业务系统文件夹准备、三段式上传和预览链接创建。上传前会把文件暂存到受控临时文件，计算大小和 `sha256`，避免把完整文件一次性放进 Java 堆内存。实体文件上传只接受 WPS 返回的 `PUT` 方法；如果上游返回其他 method，会按不可信响应处理。
 
 ## USER 文件列表
 
@@ -149,7 +156,7 @@ sequenceDiagram
 end
 ```
 
-USER 模式下业务系统需要先为当前业务用户换取 USER JWT。服务端只信任 JWT 中的 `userId`；query `userId` 是兼容字段，如果传入，必须与 JWT 中的 `userId` 一致。这样即使攻击者修改 URL 参数，也不能改变实际操作用户。
+USER 模式下业务系统需要先为当前业务用户换取 USER JWT。签发 USER JWT 时，本服务会校验用户断言签名；调用 USER 接口时，服务端只信任 JWT 中的 `userId`。query `userId` 是兼容字段，如果传入，必须与 JWT 中的 `userId` 一致。这样即使攻击者修改 URL 参数，也不能改变实际操作用户。
 
 ## WPS 用户授权链接
 

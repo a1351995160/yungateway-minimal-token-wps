@@ -102,10 +102,11 @@ APP 预览上传使用 `yundoc.app-preview-upload`：
    - 本地保存 `businessSystemId + driveId -> folderId` 映射，后续复用。
 6. 调用 WPS `request_upload`，传入文件名、大小和 `sha256`。
 7. 校验 WPS 返回的上传地址必须是 HTTPS、无 userInfo、无 fragment，且 host 命中 `upload-url-allowed-host-suffixes`。
-8. 按 WPS 返回的 `store_request.method` 和 `store_request.url` 上传临时文件实体。
-9. 调用 WPS `commit_upload`，读取提交成功后的 WPS `fileId`。
-10. 使用该 `fileId` 调用预览接口创建预览链接。
-11. 删除临时文件，返回 `previewUrl`、`expireAt` 和排查用 `fileId`。
+8. 校验 WPS 返回的 `store_request.method` 必须为 `PUT`，其他 method 视为不可信上游响应。
+9. 按通过校验的 `store_request.url` 上传临时文件实体。
+10. 调用 WPS `commit_upload`，读取提交成功后的 WPS `fileId`。
+11. 使用该 `fileId` 调用预览接口创建预览链接。
+12. 删除临时文件，返回 `previewUrl`、`expireAt` 和排查用 `fileId`。
 
 ## 创建预览链接
 
@@ -177,7 +178,7 @@ USER token 响应包含 `access_token`、`expires_in`、`refresh_token`、`refre
 - `base-url` 不允许 userInfo、query、fragment。
 - 使用 `NoRedirectSimpleClientHttpRequestFactory` 禁止自动跟随重定向。
 - 对网络异常、HTTP 5xx、HTTP 429 做有限重试。
-- WPS 上传实体文件地址也按 HTTPS、host 后缀白名单和禁止重定向校验，避免把业务文件上传到非 WPS 地址。
+- WPS 上传实体文件地址也按 HTTPS、host 后缀白名单和禁止重定向校验，上传方法只接受 `PUT`，避免把业务文件上传到非 WPS 地址或被任意 method 影响。
 - 其他 RestClient 异常统一映射为 `WPS_UPSTREAM_ERROR`。
 
 ## 上游响应信任边界

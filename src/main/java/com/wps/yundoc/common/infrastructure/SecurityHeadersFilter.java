@@ -13,9 +13,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * SecurityHeadersFilter component.
+ * SecurityHeadersFilter 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 2)

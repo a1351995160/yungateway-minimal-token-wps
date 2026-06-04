@@ -3,6 +3,8 @@ package com.wps.yundoc.wpsclient.infrastructure;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
 import com.wps.yundoc.common.util.Texts;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -16,11 +18,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 /**
- * WpsClientSupport component.
+ * WpsClientSupport 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 final class WpsClientSupport {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(WpsClientSupport.class);
 
     private static final int SUCCESS_CODE = 0;
     private static final String HTTPS_SCHEME = "https";
@@ -65,12 +70,16 @@ final class WpsClientSupport {
     }
 
     static <T> T executeWithRetry(WpsClientProperties properties, WpsCall<T> call) {
+        return executeWithRetry(properties, "WPS请求", call);
+    }
+
+    static <T> T executeWithRetry(WpsClientProperties properties, String operation, WpsCall<T> call) {
         int maxAttempts = maxAttempts(properties);
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 return call.execute();
             } catch (RestClientException ex) {
-                handleRetry(attempt, maxAttempts, ex);
+                handleRetry(operation, attempt, maxAttempts, ex);
             }
         }
         throw upstreamError(null);
@@ -100,10 +109,21 @@ final class WpsClientSupport {
         return uri.getUserInfo() == null && uri.getQuery() == null && uri.getFragment() == null;
     }
 
-    private static void handleRetry(int attempt, int maxAttempts, RestClientException ex) {
+    private static void handleRetry(String operation, int attempt, int maxAttempts, RestClientException ex) {
         if (canRetry(attempt, maxAttempts, ex)) {
+                LOGGER.warn("WPS请求本次尝试失败，准备重试 操作={} 当前次数={} 最大次数={} 异常类型={}",
+                    operation,
+                    Integer.valueOf(attempt),
+                    Integer.valueOf(maxAttempts),
+                    ex.getClass().getSimpleName());
             return;
         }
+        LOGGER.error("WPS请求最终失败 操作={} 当前次数={} 最大次数={} 异常类型={}",
+                operation,
+                Integer.valueOf(attempt),
+                Integer.valueOf(maxAttempts),
+                ex.getClass().getSimpleName(),
+                ex);
         throw upstreamError(ex);
     }
 
@@ -161,9 +181,9 @@ final class WpsClientSupport {
     interface WpsCall<T> {
 
         /**
-         * Executes a single WPS request attempt.
+         * 执行一次 WPS 请求尝试。
          *
-         * @return response from WPS
+         * @return WPS 响应结果
          */
         T execute();
     }

@@ -10,9 +10,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * WpsClientConfiguration component.
+ * WpsClientConfiguration 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Configuration
 public class WpsClientConfiguration {

@@ -2,6 +2,9 @@ package com.wps.yundoc.auth.application;
 
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.LogSanitizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -10,12 +13,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * AuthTokenRateLimiter component.
+ * AuthTokenRateLimiter 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component
 public class AuthTokenRateLimiter {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthTokenRateLimiter.class);
 
     private static final String UNKNOWN_KEY = "unknown";
 
@@ -76,7 +82,16 @@ public class AuthTokenRateLimiter {
         if (bucketAllowed(bucket, maxFailures)) {
             return;
         }
+        logRateLimitRejected(key, maxFailures);
         throw new YundocException(YundocErrorCode.RATE_LIMIT_EXCEEDED);
+    }
+
+    private void logRateLimitRejected(String key, int maxFailures) {
+        if (LOGGER.isWarnEnabled()) {
+            LOGGER.warn("令牌申请触发限流 限流键指纹={} 最大失败次数={}",
+                    LogSanitizer.fingerprint(key),
+                    Integer.valueOf(maxFailures));
+        }
     }
 
     private AttemptBucket activeBucket(ConcurrentMap<String, AttemptBucket> failures, String key, long now) {
@@ -114,10 +129,20 @@ public class AuthTokenRateLimiter {
         cleanupIfNeeded(failures, now);
         failures.compute(key, (failureKey, bucket) -> {
             if (bucket == null || bucket.isExpired(now, windowMillis())) {
+                logFailureRecorded(failureKey, 1);
                 return new AttemptBucket(now, 1);
             }
+            logFailureRecorded(failureKey, bucket.getFailures() + 1);
             return bucket.incremented();
         });
+    }
+
+    private void logFailureRecorded(String key, int failures) {
+        if (LOGGER.isWarnEnabled()) {
+            LOGGER.warn("令牌申请失败次数已记录 限流键指纹={} 失败次数={}",
+                    LogSanitizer.fingerprint(key),
+                    Integer.valueOf(failures));
+        }
     }
 
     private void cleanupIfNeeded(ConcurrentMap<String, AttemptBucket> failures, long now) {

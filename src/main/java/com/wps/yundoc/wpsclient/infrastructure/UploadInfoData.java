@@ -4,9 +4,10 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * UploadInfoData component.
+ * UploadInfoData 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 class UploadInfoData {
 

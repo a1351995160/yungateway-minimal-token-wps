@@ -12,9 +12,10 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * YundocConfigurationHealthIndicator component.
+ * YundocConfigurationHealthIndicator 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component("yundocConfiguration")
 public class YundocConfigurationHealthIndicator implements HealthIndicator {

@@ -8,7 +8,7 @@ flowchart LR
     Auth --> AuthSvc["AuthTokenService"]
     AuthSvc --> DB["MySQL/TDSQL"]
     AuthSvc --> JWT["JwtService"]
-    Biz -->|"Bearer JWT"| Gateway["能力 API"]
+    Biz -->|"Bearer JWT"| Gateway["对外接口"]
     Gateway --> Filter["JwtAuthenticationFilter"]
     Filter --> Permission["BusinessSystemApiPermissionService"]
     Permission --> DB
@@ -34,15 +34,15 @@ flowchart LR
 | 组件 | 职责 |
 | --- | --- |
 | `GatewayRequestContextFilter` | 生成或继承 `X-Request-Id`，放入 `RequestContextHolder`。 |
-| `JwtAuthenticationFilter` | 对能力 API 校验 Bearer JWT，并执行 API 权限检查。 |
+| `JwtAuthenticationFilter` | 对对外接口校验 Bearer JWT，并执行 API 权限检查。 |
 | `CapabilityRoutePolicy` | 将 HTTP method + path 映射为 API code。 |
 | `AuthTokenService` | 校验业务系统凭证，签发内部 JWT。 |
 | `BusinessSystemApiPermissionService` | 校验业务系统状态、token 版本、权限版本和 API 权限。 |
-| `UserAssertionVerifier` | 历史兼容组件；新 USER 主链路不再要求每次请求携带用户断言签名。 |
+| `UserAssertionVerifier` | USER 访问令牌签发时校验用户断言签名、时间戳和 nonce，防止伪造或重放用户身份。 |
 | `WpsCredentialService` | 获取和缓存 WPS app token。 |
 | `WpsUserAuthorizationService` | 管理 WPS USER OAuth state 和 user token。 |
 | `WpsHttpClient` | 创建预览链接和获取 WPS app token。 |
-| `WpsFileHttpClient` | 使用 WPS user token 查询文件列表。 |
+| `WpsFileHttpClient` | 调用 WPS 应用盘、文件夹、文件上传和用户文件列表接口。 |
 | `WpsAuthorizationHttpClient` | 生成 WPS 授权 URL，并用 OAuth code 换 user token。 |
 
 ## 请求上下文
@@ -59,7 +59,7 @@ flowchart LR
 | `jti` | JWT claim | JWT 唯一标识。 |
 | `tokenVersion` | JWT claim + 数据库 | token 失效控制。 |
 | `permissionVersion` | JWT claim + 数据库 | 权限变更后旧 token 失效控制。 |
-| `apiCode` | `CapabilityRoutePolicy` | 当前请求能力码。 |
+| `apiCode` | `CapabilityRoutePolicy` | 当前请求接口权限码。 |
 
 ## 数据存储
 
@@ -67,13 +67,14 @@ flowchart LR
 
 - `biz_system`：业务系统接入配置和 client secret 摘要。
 - `biz_system_api_permission`：业务系统拥有的 API 能力权限。
+- `app_preview_folder`：APP 预览在 WPS 应用盘中的业务系统文件夹映射。
 
 当前内存缓存包括：
 
 - `LocalWpsTokenCache`：WPS app token。
 - `LocalWpsUserTokenCache`：WPS user token，以 `userId` 维度缓存。
 - `LocalOauthStateCache`：WPS USER 授权 state。
-- `UserAssertionNonceCache`：历史用户断言 nonce 缓存，新 USER 主链路不再依赖。
+- `UserAssertionNonceCache`：USER 访问令牌签发时使用的用户断言 nonce 缓存，避免同一 nonce 重放。
 
 生产多实例时，内存缓存需要替换为 Redis 或数据库。
 

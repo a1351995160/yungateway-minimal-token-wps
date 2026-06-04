@@ -1,9 +1,10 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
 /**
- * WpsFileItemResponse component.
+ * WpsFileItemResponse 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 class WpsFileItemResponse implements WpsEnvelope<FileListItemData> {
 

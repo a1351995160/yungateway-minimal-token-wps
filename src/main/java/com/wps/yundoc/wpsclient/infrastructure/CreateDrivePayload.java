@@ -4,9 +4,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * CreateDrivePayload component.
+ * CreateDrivePayload 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class CreateDrivePayload {

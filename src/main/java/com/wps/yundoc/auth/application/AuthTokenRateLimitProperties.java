@@ -5,9 +5,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 
 /**
- * AuthTokenRateLimitProperties component.
+ * AuthTokenRateLimitProperties 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @ConfigurationProperties(prefix = "yundoc.auth-token-rate-limit")
 public class AuthTokenRateLimitProperties {

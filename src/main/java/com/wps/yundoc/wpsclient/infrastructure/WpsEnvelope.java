@@ -1,23 +1,24 @@
 package com.wps.yundoc.wpsclient.infrastructure;
 
 /**
- * WpsEnvelope component.
+ * WpsEnvelope 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 interface WpsEnvelope<T> {
 
     /**
-     * Returns WPS response code.
+     * 返回 WPS 响应码。
      *
-     * @return WPS response code
+     * @return WPS 响应码
      */
     Integer getCode();
 
     /**
-     * Returns WPS response payload.
+     * 返回 WPS 响应数据。
      *
-     * @return response payload
+     * @return 响应数据
      */
     T getData();
 }

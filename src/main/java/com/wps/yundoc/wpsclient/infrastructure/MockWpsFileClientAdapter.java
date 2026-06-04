@@ -16,9 +16,10 @@ import com.wps.yundoc.wpsclient.application.WpsUploadFileRequest;
 import com.wps.yundoc.wpsclient.application.WpsUploadInfo;
 
 /**
- * MockWpsFileClientAdapter component.
+ * MockWpsFileClientAdapter 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 class MockWpsFileClientAdapter implements WpsFileClient {
 

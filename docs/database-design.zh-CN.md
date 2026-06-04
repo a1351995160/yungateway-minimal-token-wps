@@ -90,7 +90,7 @@ erDiagram
 | `created_at` | `DATETIME(3)` | NOT NULL | 创建时间。 |
 | `updated_at` | `DATETIME(3)` | NOT NULL | 更新时间。 |
 
-主键为 `(business_system_id, api_code)`，用于能力 API 鉴权。
+主键为 `(business_system_id, api_code)`，用于对外接口鉴权。
 
 ## app_preview_folder
 
@@ -113,7 +113,7 @@ JWT 中携带 `tokenVersion` 和 `permissionVersion`：
 
 - 禁用或强制重置某业务系统 token 时，提升 `token_version`。
 - 调整业务系统权限后，提升 `permission_version`。
-- 请求能力 API 时，服务会比较 JWT claim 和数据库当前版本，不一致则返回 `TOKEN_INVALID`。
+- 请求对外接口时，服务会比较 JWT claim 和数据库当前版本，不一致则返回 `TOKEN_INVALID`。
 
 ## 示例数据
 
@@ -132,7 +132,9 @@ JWT 中携带 `tokenVersion` 和 `permissionVersion`：
 - `user-files:list`
 - `user-files:rename`
 - `user-files:download`
+- `user-folders:rename`
 - `user-files:create`
+- `user-files:save-as`
 - `user-files:view`
 - `user-files:delete`
 - `user-files:update`

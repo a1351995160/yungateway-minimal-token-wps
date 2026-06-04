@@ -8,9 +8,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * StagedAppPreviewFile component.
+ * StagedAppPreviewFile 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class StagedAppPreviewFile implements AutoCloseable {
 

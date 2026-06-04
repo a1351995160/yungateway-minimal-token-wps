@@ -7,9 +7,10 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * BizSystemApiPermissionPO component.
+ * BizSystemApiPermissionPO 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Getter
 @Setter

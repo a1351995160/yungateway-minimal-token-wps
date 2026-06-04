@@ -1,17 +1,18 @@
 package com.wps.yundoc.businesssystem.domain;
 
 /**
- * WpsIdentityType component.
+ * WpsIdentityType 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public enum WpsIdentityType {
     /**
-     * Application credential mode.
+     * 应用身份模式。
      */
     APP,
     /**
-     * End user authorization mode.
+     * 终端用户授权模式。
      */
     USER
 }

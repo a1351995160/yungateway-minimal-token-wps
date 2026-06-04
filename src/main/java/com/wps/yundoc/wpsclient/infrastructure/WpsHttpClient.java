@@ -6,6 +6,8 @@ import com.wps.yundoc.wpsclient.application.WpsAppTokenClient;
 import com.wps.yundoc.wpsclient.application.WpsPreviewClient;
 import com.wps.yundoc.wpsclient.application.WpsPreviewLink;
 import com.wps.yundoc.wpsclient.application.WpsPreviewRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -25,13 +27,18 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * WpsHttpClient component.
+ * WpsHttpClient 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(WpsHttpClient.class);
+
     private static final long PREVIEW_EXPIRY_SKEW_SECONDS = 30L;
+    private static final String CREATE_PREVIEW_OPERATION = "创建预览链接";
+    private static final String ISSUE_APP_TOKEN_OPERATION = "申请应用凭证";
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
@@ -53,18 +60,93 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
 
     @Override
     public WpsPreviewLink createPreview(WpsPreviewRequest request) {
-        WpsPreviewResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                () -> executePreviewOnce(request));
-        return toPreviewLink(response, request);
+        long startedAt = System.nanoTime();
+        logPreviewRequestStarted(request);
+        return executePreviewRequest(request, startedAt);
+    }
+
+    private WpsPreviewLink executePreviewRequest(WpsPreviewRequest request, long startedAt) {
+        try {
+            WpsPreviewResponse response = WpsClientSupport.executeWithRetry(
+                    properties,
+                    CREATE_PREVIEW_OPERATION,
+                    () -> executePreviewOnce(request));
+            WpsPreviewLink link = toPreviewLink(response, request);
+            logPreviewRequestCompleted(request, link, startedAt);
+            return link;
+        } catch (RuntimeException ex) {
+            logPreviewRequestFailed(request, startedAt, ex);
+            throw ex;
+        }
     }
 
     @Override
     public WpsAppToken issueAppToken() {
-        WpsOauthTokenResponse response = WpsClientSupport.executeWithRetry(
-                properties,
-                this::executeAppTokenOnce);
-        return toAppToken(response);
+        long startedAt = System.nanoTime();
+        logAppTokenRequestStarted();
+        return executeAppTokenRequest(startedAt);
+    }
+
+    private WpsAppToken executeAppTokenRequest(long startedAt) {
+        try {
+            WpsOauthTokenResponse response = WpsClientSupport.executeWithRetry(
+                    properties,
+                    ISSUE_APP_TOKEN_OPERATION,
+                    this::executeAppTokenOnce);
+            WpsAppToken appToken = toAppToken(response);
+            logAppTokenRequestCompleted(appToken, startedAt);
+            return appToken;
+        } catch (RuntimeException ex) {
+            logAppTokenRequestFailed(startedAt, ex);
+            throw ex;
+        }
+    }
+
+    private void logPreviewRequestStarted(WpsPreviewRequest request) {
+        LOGGER.info("WPS请求开始 操作={} 请求方法=POST 请求路径={} WPS文件ID={} 预览有效秒数={}",
+                CREATE_PREVIEW_OPERATION,
+                properties.getPreviewPath(),
+                request.getFileId(),
+                Integer.valueOf(request.getExpireSeconds()));
+    }
+
+    private void logPreviewRequestCompleted(WpsPreviewRequest request, WpsPreviewLink link, long startedAt) {
+        LOGGER.info("WPS请求完成 操作={} WPS文件ID={} 过期时间={} 耗时毫秒={}",
+                CREATE_PREVIEW_OPERATION,
+                request.getFileId(),
+                link.getExpireAt(),
+                Long.valueOf(elapsedMillis(startedAt)));
+    }
+
+    private void logPreviewRequestFailed(WpsPreviewRequest request, long startedAt, RuntimeException ex) {
+        LOGGER.error("WPS请求失败 操作={} WPS文件ID={} 耗时毫秒={}",
+                CREATE_PREVIEW_OPERATION,
+                request.getFileId(),
+                Long.valueOf(elapsedMillis(startedAt)),
+                ex);
+    }
+
+    private void logAppTokenRequestStarted() {
+        LOGGER.info("WPS请求开始 操作={} 请求方法=POST 请求路径={} 应用ID={}",
+                ISSUE_APP_TOKEN_OPERATION,
+                properties.getTokenPath(),
+                properties.getAppId());
+    }
+
+    private void logAppTokenRequestCompleted(WpsAppToken appToken, long startedAt) {
+        LOGGER.info("WPS请求完成 操作={} 应用ID={} 过期时间={} 耗时毫秒={}",
+                ISSUE_APP_TOKEN_OPERATION,
+                properties.getAppId(),
+                appToken.getExpiresAt(),
+                Long.valueOf(elapsedMillis(startedAt)));
+    }
+
+    private void logAppTokenRequestFailed(long startedAt, RuntimeException ex) {
+        LOGGER.error("WPS请求失败 操作={} 应用ID={} 耗时毫秒={}",
+                ISSUE_APP_TOKEN_OPERATION,
+                properties.getAppId(),
+                Long.valueOf(elapsedMillis(startedAt)),
+                ex);
     }
 
     private WpsPreviewResponse executePreviewOnce(WpsPreviewRequest request) {
@@ -158,6 +240,10 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
     private void validatePreviewUrl(String previewUrl) {
         URI uri = uri(previewUrl);
         if (!isValidPreviewUri(uri)) {
+            LOGGER.warn("拒绝WPS预览地址 主机={} 协议={} 是否包含用户信息={}",
+                    uri.getHost(),
+                    uri.getScheme(),
+                    Boolean.valueOf(uri.getUserInfo() != null));
             throw WpsClientSupport.upstreamError(null);
         }
     }
@@ -205,8 +291,15 @@ public class WpsHttpClient implements WpsPreviewClient, WpsAppTokenClient {
                 .plusSeconds(request.getExpireSeconds())
                 .plusSeconds(PREVIEW_EXPIRY_SKEW_SECONDS);
         if (expireAt.isAfter(maxExpireAt)) {
+            LOGGER.warn("拒绝WPS预览过期时间 WPS文件ID={} 实际过期时间={} 最大允许过期时间={}",
+                    request.getFileId(),
+                    expireAt,
+                    maxExpireAt);
             throw WpsClientSupport.upstreamError(null);
         }
     }
 
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
+    }
 }

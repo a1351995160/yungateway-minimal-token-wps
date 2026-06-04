@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import java.util.List;
 
 /**
- * FileListData component.
+ * FileListData 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class FileListData {
 

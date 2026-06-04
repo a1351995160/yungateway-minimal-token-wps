@@ -1,9 +1,10 @@
 package com.wps.yundoc.auth.application;
 
 /**
- * HexStrings component.
+ * HexStrings 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 final class HexStrings {
 

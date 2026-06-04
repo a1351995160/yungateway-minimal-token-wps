@@ -2,9 +2,9 @@
 
 ## 设计目标
 
-USER 模式用于代表某个 WPS 用户访问用户文件能力。业务系统需要先为当前业务用户获取一个 USER JWT，再用这个 USER JWT 生成 WPS 授权链接、完成 WPS 回调、访问用户文件列表。
+USER 模式用于代表某个 WPS 用户访问用户文件接口。业务系统需要先为当前业务用户获取一个 USER JWT，再用这个 USER JWT 生成 WPS 授权链接、完成 WPS 回调、访问用户文件列表。
 
-USER 主链路不再依赖普通 query 参数声明用户身份，也不再要求每次请求额外携带用户断言签名。服务端只信任 USER JWT 中的 `userId`。
+USER 接口调用时不再依赖普通 query 参数声明用户身份，也不要求每次访问文件列表都额外携带用户断言签名。服务端只信任 USER JWT 中的 `userId`。但在签发 USER JWT 时，业务系统必须携带用户断言签名，本服务会校验签名、时间戳和 nonce，防止伪造或重放用户身份请求。
 
 ## USER JWT
 
@@ -18,6 +18,17 @@ USER 主链路不再依赖普通 query 参数声明用户身份，也不再要�
   "userId": "user-001"
 }
 ```
+
+USER token 请求必须同时携带以下请求头：
+
+| Header | 说明 |
+| --- | --- |
+| `X-Yundoc-User-Id` | 必须与请求体 `userId` 一致。 |
+| `X-Yundoc-User-Timestamp` | Unix 秒级时间戳，必须在允许时间窗口内。 |
+| `X-Yundoc-User-Nonce` | 一次性随机串，同一业务系统窗口内不可重复。 |
+| `X-Yundoc-User-Signature` | 用户断言签名，使用配置的摘要密钥做 HMAC-SHA256 后 Base64 URL 编码。 |
+
+签名输入绑定请求方法、路径、query、`businessSystemId`、`clientId`、`userId`、时间戳和 nonce。签名只在 USER JWT 签发时校验；后续 USER 文件列表接口以 JWT 中的 `userId` 为准。
 
 JWT 中包含：
 

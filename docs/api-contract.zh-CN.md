@@ -34,7 +34,7 @@
 
 ## POST /api/v1/auth/token
 
-业务系统使用 `clientId + clientSecret` 换内部 JWT。默认签发 APP JWT；USER 场景需要显式传 `identityType=USER` 和 `userId`。
+业务系统使用 `clientId + clientSecret` 换内部 JWT。默认签发 APP JWT；USER 场景需要显式传 `identityType=USER` 和 `userId`，并携带用户断言签名请求头。
 
 请求：
 
@@ -57,6 +57,41 @@ USER 请求：
 }
 ```
 
+USER 请求还需要以下请求头：
+
+| Header | 必填 | 说明 |
+| --- | --- | --- |
+| `X-Yundoc-User-Id` | 是 | 必须与请求体 `userId` 一致。 |
+| `X-Yundoc-User-Timestamp` | 是 | Unix 秒级时间戳，允许误差由 `yundoc.user-assertion.max-clock-skew` 控制。 |
+| `X-Yundoc-User-Nonce` | 是 | 一次性随机串，同一业务系统窗口内不能重复。 |
+| `X-Yundoc-User-Signature` | 是 | 使用系统摘要密钥对签名串做 HMAC-SHA256 后，再做 Base64 URL 编码。 |
+
+USER 断言签名串：
+
+```text
+HTTP_METHOD + "\n"
++ requestPath + "\n"
++ queryString + "\n"
++ businessSystemId + "\n"
++ clientId + "\n"
++ userId + "\n"
++ timestamp + "\n"
++ nonce
+```
+
+其中 token 接口通常为：
+
+```text
+POST
+/api/v1/auth/token
+
+biz_local_demo
+local-client
+user-001
+1760000000
+nonce-001
+```
+
 约束：
 
 | 字段 | 约束 |
@@ -64,7 +99,7 @@ USER 请求：
 | `clientId` | 必填，最长 64。 |
 | `clientSecret` | 必填，最长 128。 |
 | `identityType` | 选填，`APP` 或 `USER`，不传默认 `APP`。 |
-| `userId` | USER JWT 必填，最长 128。 |
+| `userId` | USER JWT 必填，最长 128；APP JWT 会忽略该字段。 |
 
 响应数据：
 
@@ -136,6 +171,7 @@ curl -X POST "https://gateway.example.com/api/v1/app/previews" \
 - `fileId` 是网关上传到 WPS 后得到的文件 ID，主要用于排查问题，业务系统不需要再拿它调用预览接口。
 - 网关会按 `businessSystemId` 在 WPS 中准备独立文件夹，避免不同业务系统的预览文件混在一起。
 - 文件上传按 WPS 三段式链路执行：请求上传信息、上传实体文件、提交上传完成。
+- 实体文件上传只接受 WPS 返回的 `PUT` 方法，其他 method 会被视为不可信上游响应。
 - WPS 返回的 `previewUrl` 必须是 HTTPS，并且 host 必须在允许列表内。
 - WPS 返回的 `expireAt` 不能超过请求有效期加 30 秒容忍窗口。
 
@@ -224,7 +260,7 @@ WPS authorization completed
 | `API_PERMISSION_DENIED` | 403 | 当前业务系统没有该 API 权限。 |
 | `USER_ID_REQUIRED` | 400 | USER 模式缺少用户 ID。 |
 | `REAUTH_REQUIRED` | 401 | 需要 WPS USER 授权。 |
-| `USER_ASSERTION_INVALID` | 401 | 兼容期用户断言签名无效。新 USER 主链路不再要求该签名。 |
+| `USER_ASSERTION_INVALID` | 401 | USER 访问令牌签发时，用户断言签名、时间戳、nonce 或用户 ID 校验失败。 |
 | `VALIDATION_FAILED` | 400 | 入参校验失败。 |
 | `RATE_LIMIT_EXCEEDED` | 429 | token 换取失败次数超过限流阈值。 |
 | `WPS_UPSTREAM_ERROR` | 502 | WPS 上游调用失败或响应不可信。 |

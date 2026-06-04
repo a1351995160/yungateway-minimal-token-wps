@@ -6,9 +6,10 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * SecretGenerator component.
+ * SecretGenerator 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component
 public class SecretGenerator {

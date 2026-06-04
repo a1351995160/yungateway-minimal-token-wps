@@ -3,9 +3,10 @@ package com.wps.yundoc.common.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Pagination component.
+ * Pagination 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Pagination {

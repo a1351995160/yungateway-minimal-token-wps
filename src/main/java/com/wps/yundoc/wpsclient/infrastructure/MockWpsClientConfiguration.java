@@ -10,9 +10,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * MockWpsClientConfiguration component.
+ * MockWpsClientConfiguration 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Configuration
 @Profile({"local", "test"})

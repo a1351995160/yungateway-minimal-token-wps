@@ -2,6 +2,8 @@ package com.wps.yundoc.wpsclient.infrastructure;
 
 import com.wps.yundoc.credential.domain.WpsUserToken;
 import com.wps.yundoc.wpsclient.application.WpsAuthorizationClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -16,11 +18,18 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 
 /**
- * WpsAuthorizationHttpClient component.
+ * WpsAuthorizationHttpClient 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(WpsAuthorizationHttpClient.class);
+
+    private static final int STATE_PREFIX_LENGTH = 8;
+    private static final String EXCHANGE_USER_CODE_OPERATION = "用户授权码换取凭证";
+    private static final String REFRESH_USER_TOKEN_OPERATION = "刷新用户凭证";
 
     private final WpsClientProperties properties;
     private final RestTemplate restTemplate;
@@ -40,6 +49,12 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
 
     @Override
     public String authorizeUrl(String state) {
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("WPS用户授权地址已生成 请求路径={} 应用ID={} 状态前缀={}",
+                    properties.getAuthorizePath(),
+                    properties.getAppId(),
+                    statePrefix(state));
+        }
         return UriComponentsBuilder.fromHttpUrl(baseAuthorizeUrl())
                 .queryParam("client_id", properties.getAppId())
                 .queryParam("redirect_uri", properties.getRedirectUri())
@@ -51,18 +66,60 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
 
     @Override
     public WpsUserToken exchangeCode(String code) {
-        WpsOauthTokenResponse response = WpsClientSupport.executeWithRetry(
-                properties,
+        long startedAt = System.nanoTime();
+        logTokenRequestStarted(EXCHANGE_USER_CODE_OPERATION);
+        return executeTokenOperation(
+                EXCHANGE_USER_CODE_OPERATION,
+                startedAt,
                 () -> exchange(authorizationCodeBody(code)));
-        return toUserToken(response);
     }
 
     @Override
     public WpsUserToken refreshToken(String refreshToken) {
-        WpsOauthTokenResponse response = WpsClientSupport.executeWithRetry(
-                properties,
+        long startedAt = System.nanoTime();
+        logTokenRequestStarted(REFRESH_USER_TOKEN_OPERATION);
+        return executeTokenOperation(
+                REFRESH_USER_TOKEN_OPERATION,
+                startedAt,
                 () -> exchange(refreshTokenBody(refreshToken)));
-        return toUserToken(response);
+    }
+
+    private WpsUserToken executeTokenOperation(
+            String operation,
+            long startedAt,
+            WpsClientSupport.WpsCall<WpsOauthTokenResponse> call) {
+        try {
+            WpsOauthTokenResponse response = WpsClientSupport.executeWithRetry(properties, operation, call);
+            WpsUserToken token = toUserToken(response);
+            logTokenRequestCompleted(operation, token, startedAt);
+            return token;
+        } catch (RuntimeException ex) {
+            logTokenRequestFailed(operation, startedAt, ex);
+            throw ex;
+        }
+    }
+
+    private void logTokenRequestStarted(String operation) {
+        LOGGER.info("WPS请求开始 操作={} 请求方法=POST 请求路径={} 应用ID={}",
+                operation,
+                properties.getUserTokenPath(),
+                properties.getAppId());
+    }
+
+    private void logTokenRequestCompleted(String operation, WpsUserToken token, long startedAt) {
+        LOGGER.info("WPS请求完成 操作={} 应用ID={} 过期时间={} 耗时毫秒={}",
+                operation,
+                properties.getAppId(),
+                token.getExpiresAt(),
+                Long.valueOf(elapsedMillis(startedAt)));
+    }
+
+    private void logTokenRequestFailed(String operation, long startedAt, RuntimeException ex) {
+        LOGGER.error("WPS请求失败 操作={} 应用ID={} 耗时毫秒={}",
+                operation,
+                properties.getAppId(),
+                Long.valueOf(elapsedMillis(startedAt)),
+                ex);
     }
 
     private WpsOauthTokenResponse exchange(MultiValueMap<String, String> body) {
@@ -130,5 +187,16 @@ public class WpsAuthorizationHttpClient implements WpsAuthorizationClient {
             throw WpsClientSupport.upstreamError(null);
         }
         return OffsetDateTime.now().plusSeconds(expiresIn.longValue());
+    }
+
+    private String statePrefix(String state) {
+        if (state == null || state.length() <= STATE_PREFIX_LENGTH) {
+            return state;
+        }
+        return state.substring(0, STATE_PREFIX_LENGTH);
+    }
+
+    private long elapsedMillis(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
     }
 }

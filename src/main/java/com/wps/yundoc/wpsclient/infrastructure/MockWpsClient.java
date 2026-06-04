@@ -27,9 +27,10 @@ import java.time.OffsetDateTime;
 import java.util.Collections;
 
 /**
- * MockWpsClient component.
+ * MockWpsClient 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public class MockWpsClient implements WpsPreviewClient, WpsAppTokenClient, WpsFileClient, WpsAuthorizationClient {
 
@@ -77,7 +78,7 @@ public class MockWpsClient implements WpsPreviewClient, WpsAppTokenClient, WpsFi
 
     @Override
     public void uploadFile(WpsUploadFileRequest request) {
-        // Mock client accepts the upload.
+        // 模拟客户端默认接受上传。
     }
 
     @Override

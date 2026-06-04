@@ -10,9 +10,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * LocalOauthStateCache component.
+ * LocalOauthStateCache 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @Component
 public class LocalOauthStateCache {

@@ -1,9 +1,10 @@
 package com.wps.yundoc.common.util;
 
 /**
- * Texts component.
+ * Texts 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 public final class Texts {
 

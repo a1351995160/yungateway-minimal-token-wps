@@ -7,9 +7,10 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * AppPreviewUploadProperties component.
+ * AppPreviewUploadProperties 组件。
  *
  * @author WPS
+ * @date 2026-06-02 08:53:49
  */
 @ConfigurationProperties(prefix = "yundoc.app-preview-upload")
 public class AppPreviewUploadProperties {
