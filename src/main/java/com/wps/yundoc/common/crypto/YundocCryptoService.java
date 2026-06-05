@@ -13,8 +13,12 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * 网关内部加密适配层。
@@ -27,15 +31,19 @@ public class YundocCryptoService {
 
     private static final String JCA_HMAC_SHA256 = "HmacSHA256";
     private static final char[] HEX = "0123456789abcdef".toCharArray();
+    private static final Set<String> SHA256_ALGORITHMS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            YundocCryptoAlgorithms.HMAC_SHA256,
+            YundocCryptoAlgorithms.JWT_HS256)));
+    private static final Set<String> SM3_ALGORITHMS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            YundocCryptoAlgorithms.HMAC_SM3,
+            YundocCryptoAlgorithms.JWT_HSM3)));
 
     public byte[] hmac(String algorithm, String key, String value) {
         String normalized = normalizedAlgorithm(algorithm);
-        if (YundocCryptoAlgorithms.HMAC_SHA256.equals(normalized)
-                || YundocCryptoAlgorithms.JWT_HS256.equals(normalized)) {
+        if (SHA256_ALGORITHMS.contains(normalized)) {
             return hmacSha256(key, value);
         }
-        if (YundocCryptoAlgorithms.HMAC_SM3.equals(normalized)
-                || YundocCryptoAlgorithms.JWT_HSM3.equals(normalized)) {
+        if (SM3_ALGORITHMS.contains(normalized)) {
             return hmacSm3(key, value);
         }
         throw unsupportedAlgorithm();

@@ -7,7 +7,11 @@ import com.wps.yundoc.common.error.YundocException;
 import com.wps.yundoc.common.util.Texts;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * ClientSecretDigestService 组件。
@@ -17,6 +21,10 @@ import java.util.Locale;
  */
 @Service
 public class ClientSecretDigestService {
+
+    private static final Set<String> SUPPORTED_ALGORITHMS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            YundocCryptoAlgorithms.HMAC_SHA256,
+            YundocCryptoAlgorithms.HMAC_SM3)));
 
     private final ClientSecretDigestProperties properties;
     private final SecretGenerator secretGenerator;
@@ -48,14 +56,24 @@ public class ClientSecretDigestService {
     }
 
     private String supportedAlgorithm(String algorithm) {
+        return requireSupportedAlgorithm(normalizedAlgorithm(algorithm));
+    }
+
+    private String normalizedAlgorithm(String algorithm) {
         if (!Texts.hasText(algorithm)) {
-            throw new YundocException(YundocErrorCode.VALIDATION_FAILED, "Unsupported secret digest algorithm");
+            throw unsupportedAlgorithm();
         }
-        String normalized = algorithm.trim().toUpperCase(Locale.ROOT);
-        if (YundocCryptoAlgorithms.HMAC_SHA256.equals(normalized)
-                || YundocCryptoAlgorithms.HMAC_SM3.equals(normalized)) {
+        return algorithm.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String requireSupportedAlgorithm(String normalized) {
+        if (SUPPORTED_ALGORITHMS.contains(normalized)) {
             return normalized;
         }
-        throw new YundocException(YundocErrorCode.VALIDATION_FAILED, "Unsupported secret digest algorithm");
+        throw unsupportedAlgorithm();
+    }
+
+    private YundocException unsupportedAlgorithm() {
+        return new YundocException(YundocErrorCode.VALIDATION_FAILED, "Unsupported secret digest algorithm");
     }
 }

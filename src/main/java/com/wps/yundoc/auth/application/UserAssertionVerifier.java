@@ -131,27 +131,31 @@ public class UserAssertionVerifier {
     }
 
     private void verifySignature(String encodedSignature, String signingInput) {
+        requireMatchingSignature(decodedSignature(encodedSignature), signingInput);
+    }
+
+    private byte[] decodedSignature(String encodedSignature) {
         try {
-            byte[] actual = decodedSignature(encodedSignature);
-            if (signatureMatches(actual, signingInput)) {
-                return;
-            }
-            throw invalid();
+            return Base64.getUrlDecoder().decode(encodedSignature);
         } catch (IllegalArgumentException ex) {
             throw invalid();
         }
     }
 
-    private byte[] decodedSignature(String encodedSignature) {
-        return Base64.getUrlDecoder().decode(encodedSignature);
+    private void requireMatchingSignature(byte[] actual, String signingInput) {
+        if (!signatureMatches(actual, signingInput)) {
+            throw invalid();
+        }
     }
 
     private boolean signatureMatches(byte[] actual, String signingInput) {
         if (matchesAlgorithm(actual, signingInput, properties.getSignatureAlgorithm())) {
             return true;
         }
-        return properties.isLegacySignatureEnabled()
-                && matchesAlgorithm(actual, signingInput, YundocCryptoAlgorithms.HMAC_SHA256);
+        if (!properties.isLegacySignatureEnabled()) {
+            return false;
+        }
+        return matchesAlgorithm(actual, signingInput, YundocCryptoAlgorithms.HMAC_SHA256);
     }
 
     private boolean matchesAlgorithm(byte[] actual, String signingInput, String algorithm) {
