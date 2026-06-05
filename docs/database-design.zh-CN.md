@@ -62,7 +62,7 @@ erDiagram
 | `client_id` | `VARCHAR(64)` | NOT NULL, UNIQUE | 业务系统换 token 使用的 client id。 |
 | `client_secret_digest` | `CHAR(64)` | NOT NULL | client secret 摘要。 |
 | `client_secret_salt` | `VARCHAR(64)` | NOT NULL | client secret 盐。 |
-| `client_secret_alg` | `VARCHAR(32)` | NOT NULL | 摘要算法，当前为 `HMAC-SHA256`。 |
+| `client_secret_alg` | `VARCHAR(32)` | NOT NULL | 摘要算法，新建默认 `HMAC-SM3`；存量 `HMAC-SHA256` 记录可兼容校验。 |
 | `status` | `VARCHAR(16)` | NOT NULL | `ENABLED` 或 `DISABLED`。 |
 | `token_version` | `INT UNSIGNED` | NOT NULL | token 版本，变更后旧 JWT 失效。 |
 | `permission_version` | `INT UNSIGNED` | NOT NULL | 权限版本，变更后旧 JWT 失效。 |

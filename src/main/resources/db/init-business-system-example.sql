@@ -4,8 +4,8 @@
 -- 2. Insert allowed WPS capability codes into biz_system_api_permission.
 -- 3. Call POST /api/v1/auth/token with client_id and the raw client secret.
 --
--- The digest below is illustrative local data only. Generate a new client secret,
--- salt, and digest for every real environment.
+-- The digest below is illustrative legacy local data only. Generate a new
+-- client secret, salt, and HMAC-SM3 digest for every real environment.
 
 DELETE FROM biz_system_api_permission WHERE business_system_id = 'biz_local_demo';
 DELETE FROM biz_system WHERE business_system_id = 'biz_local_demo' OR client_id = 'local-client';

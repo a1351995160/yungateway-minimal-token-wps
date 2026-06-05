@@ -1,13 +1,13 @@
 package com.wps.yundoc.auth.application;
 
+import com.wps.yundoc.common.crypto.YundocCryptoAlgorithms;
+import com.wps.yundoc.common.crypto.YundocCryptoService;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import java.util.Locale;
 
 /**
  * ClientSecretDigestService 组件。
@@ -18,17 +18,17 @@ import java.security.MessageDigest;
 @Service
 public class ClientSecretDigestService {
 
-    private static final String HMAC_SHA256 = "HMAC-SHA256";
-    private static final String JCA_HMAC_SHA256 = "HmacSHA256";
-
     private final ClientSecretDigestProperties properties;
     private final SecretGenerator secretGenerator;
+    private final YundocCryptoService cryptoService;
 
     public ClientSecretDigestService(
             ClientSecretDigestProperties properties,
-            SecretGenerator secretGenerator) {
+            SecretGenerator secretGenerator,
+            YundocCryptoService cryptoService) {
         this.properties = properties;
         this.secretGenerator = secretGenerator;
+        this.cryptoService = cryptoService;
     }
 
     public ClientSecretDigest digestNew(String clientSecret) {
@@ -39,30 +39,23 @@ public class ClientSecretDigestService {
 
     public boolean matches(String rawSecret, String salt, String algorithm, String expectedDigest) {
         String actualDigest = digest(rawSecret, salt, algorithm);
-        byte[] actual = actualDigest.getBytes(StandardCharsets.UTF_8);
-        byte[] expected = expectedDigest.getBytes(StandardCharsets.UTF_8);
-        return MessageDigest.isEqual(actual, expected);
+        return cryptoService.matchesText(actualDigest, expectedDigest);
     }
 
     public String digest(String rawSecret, String salt, String algorithm) {
-        assertSupported(algorithm);
-        return hmacSha256(rawSecret + ":" + salt);
+        String normalized = supportedAlgorithm(algorithm);
+        return cryptoService.hmacHex(normalized, properties.getPepper(), rawSecret + ":" + salt);
     }
 
-    private void assertSupported(String algorithm) {
-        if (!HMAC_SHA256.equals(algorithm)) {
+    private String supportedAlgorithm(String algorithm) {
+        if (!Texts.hasText(algorithm)) {
             throw new YundocException(YundocErrorCode.VALIDATION_FAILED, "Unsupported secret digest algorithm");
         }
-    }
-
-    private String hmacSha256(String value) {
-        try {
-            Mac mac = Mac.getInstance(JCA_HMAC_SHA256);
-            byte[] key = properties.getPepper().getBytes(StandardCharsets.UTF_8);
-            mac.init(new SecretKeySpec(key, JCA_HMAC_SHA256));
-            return HexStrings.encode(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.GeneralSecurityException ex) {
-            throw new YundocException(YundocErrorCode.INTERNAL_ERROR, "Secret digest failed", ex);
+        String normalized = algorithm.trim().toUpperCase(Locale.ROOT);
+        if (YundocCryptoAlgorithms.HMAC_SHA256.equals(normalized)
+                || YundocCryptoAlgorithms.HMAC_SM3.equals(normalized)) {
+            return normalized;
         }
+        throw new YundocException(YundocErrorCode.VALIDATION_FAILED, "Unsupported secret digest algorithm");
     }
 }

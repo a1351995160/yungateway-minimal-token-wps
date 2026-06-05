@@ -26,7 +26,7 @@ USER token 请求必须同时携带以下请求头：
 | `X-Yundoc-User-Id` | 必须与请求体 `userId` 一致。 |
 | `X-Yundoc-User-Timestamp` | Unix 秒级时间戳，必须在允许时间窗口内。 |
 | `X-Yundoc-User-Nonce` | 一次性随机串，同一业务系统窗口内不可重复。 |
-| `X-Yundoc-User-Signature` | 用户断言签名，使用配置的摘要密钥做 HMAC-SHA256 后 Base64 URL 编码。 |
+| `X-Yundoc-User-Signature` | 用户断言签名，默认使用配置的摘要密钥做 HMAC-SM3 后 Base64 URL 编码；兼容期可开启 legacy HMAC-SHA256 验签。 |
 
 签名输入绑定请求方法、路径、query、`businessSystemId`、`clientId`、`userId`、时间戳和 nonce。签名只在 USER JWT 签发时校验；后续 USER 文件列表接口以 JWT 中的 `userId` 为准。
 

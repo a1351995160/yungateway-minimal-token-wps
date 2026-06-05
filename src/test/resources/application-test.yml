@@ -19,11 +19,13 @@ management:
 yundoc:
   client-secret:
     pepper: test-client-secret-pepper
-    algorithm: HMAC-SHA256
+    algorithm: HMAC-SM3
   jwt:
     issuer: yundoc-gateway-test
     audience: yundoc-business-systems-test
     secret: test-business-jwt-secret-with-enough-length
+    algorithm: HSM3
+    legacy-validation-enabled: true
     ttl: 30m
   wps-client:
     base-url: https://wps.test

@@ -1,5 +1,6 @@
 package com.wps.yundoc.auth.application;
 
+import com.wps.yundoc.common.crypto.YundocCryptoAlgorithms;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -22,7 +23,7 @@ public class ClientSecretDigestProperties {
 
     @NotBlank
     @Size(max = 32)
-    private String algorithm = "HMAC-SHA256";
+    private String algorithm = YundocCryptoAlgorithms.HMAC_SM3;
 
     public String getPepper() {
         return pepper;

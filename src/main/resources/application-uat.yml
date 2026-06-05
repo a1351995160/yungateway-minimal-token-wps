@@ -18,11 +18,13 @@ yundoc:
     tdsql-required: true
   client-secret:
     pepper: ${YUNDOC_UAT_CLIENT_SECRET_PEPPER}
-    algorithm: HMAC-SHA256
+    algorithm: HMAC-SM3
   jwt:
     issuer: yundoc-gateway-uat
     audience: yundoc-business-systems-uat
     secret: ${YUNDOC_UAT_BUSINESS_JWT_SECRET}
+    algorithm: HSM3
+    legacy-validation-enabled: ${YUNDOC_JWT_LEGACY_VALIDATION_ENABLED:true}
     ttl: ${YUNDOC_UAT_BUSINESS_JWT_TTL:30m}
   wps-client:
     base-url: ${WPS_UAT_BASE_URL}

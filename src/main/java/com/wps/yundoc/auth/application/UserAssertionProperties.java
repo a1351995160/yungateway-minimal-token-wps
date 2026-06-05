@@ -1,5 +1,6 @@
 package com.wps.yundoc.auth.application;
 
+import com.wps.yundoc.common.crypto.YundocCryptoAlgorithms;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
@@ -15,6 +16,8 @@ public class UserAssertionProperties {
 
     private Duration maxClockSkew = Duration.ofMinutes(5);
     private int maxTrackedNonces = 10000;
+    private String signatureAlgorithm = YundocCryptoAlgorithms.HMAC_SM3;
+    private boolean legacySignatureEnabled = true;
 
     public Duration getMaxClockSkew() {
         return maxClockSkew;
@@ -30,5 +33,21 @@ public class UserAssertionProperties {
 
     public void setMaxTrackedNonces(int maxTrackedNonces) {
         this.maxTrackedNonces = maxTrackedNonces;
+    }
+
+    public String getSignatureAlgorithm() {
+        return signatureAlgorithm;
+    }
+
+    public void setSignatureAlgorithm(String signatureAlgorithm) {
+        this.signatureAlgorithm = signatureAlgorithm;
+    }
+
+    public boolean isLegacySignatureEnabled() {
+        return legacySignatureEnabled;
+    }
+
+    public void setLegacySignatureEnabled(boolean legacySignatureEnabled) {
+        this.legacySignatureEnabled = legacySignatureEnabled;
     }
 }

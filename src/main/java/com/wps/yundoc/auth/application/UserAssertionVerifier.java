@@ -2,17 +2,14 @@ package com.wps.yundoc.auth.application;
 
 import com.wps.yundoc.common.context.RequestContext;
 import com.wps.yundoc.common.context.RequestContextHolder;
+import com.wps.yundoc.common.crypto.YundocCryptoAlgorithms;
+import com.wps.yundoc.common.crypto.YundocCryptoService;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
 import com.wps.yundoc.common.util.Texts;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.http.HttpServletRequest;
-import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Objects;
@@ -32,21 +29,23 @@ public class UserAssertionVerifier {
     public static final String NONCE_HEADER = "X-Yundoc-User-Nonce";
     public static final String SIGNATURE_HEADER = "X-Yundoc-User-Signature";
 
-    private static final String SIGNATURE_ALGORITHM = "HmacSHA256";
     private static final int MAX_NONCE_LENGTH = 128;
     private static final Pattern NONCE_PATTERN = Pattern.compile("^[A-Za-z0-9._:@-]+$");
 
     private final ClientSecretDigestProperties digestProperties;
     private final UserAssertionProperties properties;
     private final UserAssertionNonceCache nonceCache;
+    private final YundocCryptoService cryptoService;
 
     public UserAssertionVerifier(
             ClientSecretDigestProperties digestProperties,
             UserAssertionProperties properties,
-            UserAssertionNonceCache nonceCache) {
+            UserAssertionNonceCache nonceCache,
+            YundocCryptoService cryptoService) {
         this.digestProperties = digestProperties;
         this.properties = properties;
         this.nonceCache = nonceCache;
+        this.cryptoService = cryptoService;
     }
 
     public void verify(HttpServletRequest request, String userId) {
@@ -133,8 +132,12 @@ public class UserAssertionVerifier {
 
     private void verifySignature(String encodedSignature, String signingInput) {
         try {
-            verifySignatureBytes(decodedSignature(encodedSignature), hmac(signingInput));
-        } catch (GeneralSecurityException | IllegalArgumentException ex) {
+            byte[] actual = decodedSignature(encodedSignature);
+            if (signatureMatches(actual, signingInput)) {
+                return;
+            }
+            throw invalid();
+        } catch (IllegalArgumentException ex) {
             throw invalid();
         }
     }
@@ -143,17 +146,17 @@ public class UserAssertionVerifier {
         return Base64.getUrlDecoder().decode(encodedSignature);
     }
 
-    private void verifySignatureBytes(byte[] actual, byte[] expected) {
-        if (!MessageDigest.isEqual(actual, expected)) {
-            throw invalid();
+    private boolean signatureMatches(byte[] actual, String signingInput) {
+        if (matchesAlgorithm(actual, signingInput, properties.getSignatureAlgorithm())) {
+            return true;
         }
+        return properties.isLegacySignatureEnabled()
+                && matchesAlgorithm(actual, signingInput, YundocCryptoAlgorithms.HMAC_SHA256);
     }
 
-    private byte[] hmac(String signingInput) throws GeneralSecurityException {
-        Mac mac = Mac.getInstance(SIGNATURE_ALGORITHM);
-        byte[] key = digestProperties.getPepper().getBytes(StandardCharsets.UTF_8);
-        mac.init(new SecretKeySpec(key, SIGNATURE_ALGORITHM));
-        return mac.doFinal(signingInput.getBytes(StandardCharsets.UTF_8));
+    private boolean matchesAlgorithm(byte[] actual, String signingInput, String algorithm) {
+        byte[] expected = cryptoService.hmac(algorithm, digestProperties.getPepper(), signingInput);
+        return cryptoService.matches(actual, expected);
     }
 
     private String signingInput(
