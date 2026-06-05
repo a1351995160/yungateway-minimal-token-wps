@@ -1,9 +1,12 @@
 package com.wps.yundoc.auth.application;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wps.yundoc.auth.domain.BusinessSystemPrincipal;
 import com.wps.yundoc.auth.infrastructure.JwtProperties;
 import com.wps.yundoc.businesssystem.domain.WpsIdentityType;
+import com.wps.yundoc.common.crypto.YundocCryptoAlgorithms;
+import com.wps.yundoc.common.crypto.YundocCryptoService;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
 import org.junit.jupiter.api.Test;
@@ -23,10 +26,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class JwtServiceTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final YundocCryptoService cryptoService = new YundocCryptoService();
 
     @Test
     void rejectsExpiredBusinessJwt() {
-        JwtService service = new JwtService(properties(Duration.ofSeconds(-1)), objectMapper);
+        JwtService service = new JwtService(properties(Duration.ofSeconds(-1)), objectMapper, cryptoService);
         String token = service.issue(principal());
 
         assertThatThrownBy(() -> service.validate(token))
@@ -37,7 +41,7 @@ class JwtServiceTest {
     @Test
     void treatsLegacyJwtWithoutIdentityTypeAsAppToken() throws Exception {
         JwtProperties properties = properties(Duration.ofMinutes(30));
-        JwtService service = new JwtService(properties, objectMapper);
+        JwtService service = new JwtService(properties, objectMapper, cryptoService);
         String legacyToken = legacyAppToken(properties);
 
         BusinessSystemPrincipal principal = service.validate(legacyToken);
@@ -45,6 +49,17 @@ class JwtServiceTest {
         assertThat(principal.getIdentityType()).isEqualTo(WpsIdentityType.APP);
         assertThat(principal.getUserId()).isNull();
         assertThat(principal.getBusinessSystemId()).isEqualTo("biz-legacy");
+    }
+
+    @Test
+    void issuesJwtWithGmAlgorithm() throws Exception {
+        JwtService service = new JwtService(properties(Duration.ofMinutes(30)), objectMapper, cryptoService);
+
+        String token = service.issue(principal());
+
+        JsonNode header = objectMapper.readTree(Base64.getUrlDecoder().decode(token.split("\\.")[0]));
+        assertThat(header.path("alg").asText()).isEqualTo(YundocCryptoAlgorithms.JWT_HSM3);
+        assertThat(service.validate(token).getBusinessSystemId()).isEqualTo("biz-expired");
     }
 
     private JwtProperties properties(Duration ttl) {

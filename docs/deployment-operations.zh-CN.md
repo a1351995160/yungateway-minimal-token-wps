@@ -19,7 +19,9 @@
 | `yundoc.client-secret.pepper` | client secret 摘要和 USER 断言签名使用的 pepper。 |
 | `yundoc.jwt.issuer` | JWT issuer。 |
 | `yundoc.jwt.audience` | JWT audience。 |
-| `yundoc.jwt.secret` | JWT HS256 签名密钥。 |
+| `yundoc.jwt.secret` | 内部 JWT 签名密钥。默认新签发使用 `HSM3`。 |
+| `yundoc.jwt.legacy-validation-enabled` | 由 `YUNDOC_JWT_LEGACY_VALIDATION_ENABLED` 控制，默认 `true` 用于迁移期校验 legacy `HS256` JWT；确认旧 token 全部过期后应设置为 `false`。 |
+| `yundoc.user-assertion.legacy-signature-enabled` | 由 `YUNDOC_USER_ASSERTION_LEGACY_SIGNATURE_ENABLED` 控制，默认 `true` 用于迁移期校验 legacy `HMAC-SHA256` USER 断言；确认外部业务系统全部改用 `HMAC-SM3` 后应设置为 `false`。 |
 | `yundoc.wps-client.base-url` | WPS OpenAPI HTTPS 地址。 |
 | `yundoc.wps-client.app-id` | WPS app id。 |
 | `yundoc.wps-client.app-secret` | WPS app secret。 |

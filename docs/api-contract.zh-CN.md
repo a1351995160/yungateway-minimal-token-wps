@@ -64,7 +64,7 @@ USER 请求还需要以下请求头：
 | `X-Yundoc-User-Id` | 是 | 必须与请求体 `userId` 一致。 |
 | `X-Yundoc-User-Timestamp` | 是 | Unix 秒级时间戳，允许误差由 `yundoc.user-assertion.max-clock-skew` 控制。 |
 | `X-Yundoc-User-Nonce` | 是 | 一次性随机串，同一业务系统窗口内不能重复。 |
-| `X-Yundoc-User-Signature` | 是 | 使用系统摘要密钥对签名串做 HMAC-SHA256 后，再做 Base64 URL 编码。 |
+| `X-Yundoc-User-Signature` | 是 | 默认使用系统摘要密钥对签名串做 HMAC-SM3 后，再做 Base64 URL 编码；兼容期可开启 legacy HMAC-SHA256 验签。 |
 
 USER 断言签名串：
 

@@ -2,6 +2,7 @@ package com.wps.yundoc.testsupport;
 
 import com.wps.yundoc.auth.application.ClientSecretDigestProperties;
 import com.wps.yundoc.auth.application.ClientSecretDigestService;
+import com.wps.yundoc.common.crypto.YundocCryptoAlgorithms;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +12,7 @@ import java.util.Arrays;
 @Component
 public class BusinessSystemFixture {
 
-    private static final String DIGEST_ALGORITHM = "HMAC-SHA256";
+    private static final String DIGEST_ALGORITHM = YundocCryptoAlgorithms.HMAC_SM3;
     private static final String DEFAULT_SECRET = "test-client-secret";
     private static final int DEFAULT_JWT_TTL_SECONDS = 1800;
 

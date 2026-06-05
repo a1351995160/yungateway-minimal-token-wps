@@ -41,6 +41,8 @@ yundoc:
   user-assertion:
     max-clock-skew: 5m
     max-tracked-nonces: 10000
+    signature-algorithm: HMAC-SM3
+    legacy-signature-enabled: ${YUNDOC_USER_ASSERTION_LEGACY_SIGNATURE_ENABLED:true}
   readiness:
     tdsql-required: true
   wps-client:

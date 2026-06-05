@@ -28,6 +28,7 @@
         <p3c.pmd.version>2.1.1</p3c.pmd.version>
         <spotbugs.maven.plugin.version>4.8.6.5</spotbugs.maven.plugin.version>
         <jacoco.maven.plugin.version>0.8.11</jacoco.maven.plugin.version>
+        <bouncycastle.version>1.78</bouncycastle.version>
     </properties>
 
     <dependencies>
@@ -62,6 +63,11 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -12,7 +12,7 @@
 2. 校验业务系统状态为 `ENABLED`。
 3. 使用 `ClientSecretDigestService` 校验 `clientSecret` 摘要。
 4. USER 访问令牌签发时，额外校验用户断言签名、时间戳和 nonce。
-5. 使用 `JwtService` 签发 HS256 JWT。
+5. 使用 `JwtService` 签发内部 JWT。默认新签发使用 `HSM3`，兼容期可校验 legacy `HS256`。
 6. JWT 携带 `businessSystemId`、`clientId`、`identityType`、`jti`、`tokenVersion`、`permissionVersion`、`iat`、`exp`；USER JWT 额外携带 `userId`。
 
 JWT 校验包括格式、签名、issuer、audience、typ 和过期时间。

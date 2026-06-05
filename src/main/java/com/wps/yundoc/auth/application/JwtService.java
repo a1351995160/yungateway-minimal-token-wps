@@ -3,19 +3,20 @@ package com.wps.yundoc.auth.application;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wps.yundoc.auth.domain.BusinessSystemPrincipal;
-import com.wps.yundoc.businesssystem.domain.WpsIdentityType;
 import com.wps.yundoc.auth.infrastructure.JwtProperties;
+import com.wps.yundoc.businesssystem.domain.WpsIdentityType;
+import com.wps.yundoc.common.crypto.YundocCryptoAlgorithms;
+import com.wps.yundoc.common.crypto.YundocCryptoService;
 import com.wps.yundoc.common.error.YundocErrorCode;
 import com.wps.yundoc.common.error.YundocException;
+import com.wps.yundoc.common.util.Texts;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -27,10 +28,9 @@ import java.util.Map;
 @Service
 public class JwtService {
 
-    private static final String HEADER = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
-    private static final String JCA_HMAC_SHA256 = "HmacSHA256";
     private static final String TOKEN_TYPE = "business-jwt";
     private static final int JWT_PART_COUNT = 3;
+    private static final String ALGORITHM_CLAIM = "alg";
     private static final String ISSUER_CLAIM = "iss";
     private static final String AUDIENCE_CLAIM = "aud";
     private static final String TYPE_CLAIM = "typ";
@@ -46,10 +46,12 @@ public class JwtService {
 
     private final JwtProperties properties;
     private final ObjectMapper objectMapper;
+    private final YundocCryptoService cryptoService;
 
-    public JwtService(JwtProperties properties, ObjectMapper objectMapper) {
+    public JwtService(JwtProperties properties, ObjectMapper objectMapper, YundocCryptoService cryptoService) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.cryptoService = cryptoService;
     }
 
     public String issue(BusinessSystemPrincipal principal) {
@@ -60,14 +62,15 @@ public class JwtService {
         long issuedAt = Instant.now().getEpochSecond();
         long expiresAt = issuedAt + ttlSeconds;
         String payload = encodeJson(payload(principal, issuedAt, expiresAt));
-        String signingInput = base64Url(HEADER) + "." + payload;
-        return signingInput + "." + signature(signingInput);
+        String signingInput = encodeJson(header()) + "." + payload;
+        return signingInput + "." + signature(properties.getAlgorithm(), signingInput);
     }
 
     public BusinessSystemPrincipal validate(String token) {
         String[] parts = token.split("\\.");
         validateFormat(parts);
-        validateSignature(parts);
+        String algorithm = validateHeader(parts[0]);
+        validateSignature(parts, algorithm);
         JsonNode payload = readPayload(parts[1]);
         validatePayload(payload);
         return principal(payload);
@@ -102,11 +105,20 @@ public class JwtService {
         }
     }
 
-    private void validateSignature(String[] parts) {
+    private String validateHeader(String encodedHeader) {
+        JsonNode header = readJson(encodedHeader);
+        String algorithm = header.path(ALGORITHM_CLAIM).asText();
+        if (supportsAlgorithm(algorithm)) {
+            return normalizedAlgorithm(algorithm);
+        }
+        throw new YundocException(YundocErrorCode.TOKEN_INVALID);
+    }
+
+    private void validateSignature(String[] parts, String algorithm) {
         String signingInput = parts[0] + "." + parts[1];
-        byte[] actual = signature(signingInput).getBytes(StandardCharsets.UTF_8);
+        byte[] actual = signature(algorithm, signingInput).getBytes(StandardCharsets.UTF_8);
         byte[] expected = parts[2].getBytes(StandardCharsets.UTF_8);
-        if (!MessageDigest.isEqual(actual, expected)) {
+        if (!cryptoService.matches(actual, expected)) {
             throw new YundocException(YundocErrorCode.TOKEN_INVALID);
         }
     }
@@ -178,12 +190,23 @@ public class JwtService {
     }
 
     private JsonNode readPayload(String encodedPayload) {
+        return readJson(encodedPayload);
+    }
+
+    private JsonNode readJson(String encodedJson) {
         try {
-            byte[] json = Base64.getUrlDecoder().decode(encodedPayload);
+            byte[] json = Base64.getUrlDecoder().decode(encodedJson);
             return objectMapper.readTree(json);
         } catch (java.io.IOException | IllegalArgumentException ex) {
             throw new YundocException(YundocErrorCode.TOKEN_INVALID);
         }
+    }
+
+    private Map<String, Object> header() {
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put(ALGORITHM_CLAIM, normalizedAlgorithm(properties.getAlgorithm()));
+        header.put(TYPE_CLAIM, "JWT");
+        return header;
     }
 
     private String encodeJson(Map<String, Object> value) {
@@ -194,22 +217,28 @@ public class JwtService {
         }
     }
 
-    private String signature(String signingInput) {
-        try {
-            Mac mac = Mac.getInstance(JCA_HMAC_SHA256);
-            byte[] key = properties.getSecret().getBytes(StandardCharsets.UTF_8);
-            mac.init(new SecretKeySpec(key, JCA_HMAC_SHA256));
-            return base64Url(mac.doFinal(signingInput.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.GeneralSecurityException ex) {
-            throw new YundocException(YundocErrorCode.INTERNAL_ERROR, "Token signing failed", ex);
+    private String signature(String algorithm, String signingInput) {
+        return cryptoService.hmacBase64Url(normalizedAlgorithm(algorithm), properties.getSecret(), signingInput);
+    }
+
+    private boolean supportsAlgorithm(String algorithm) {
+        String normalized = normalizedAlgorithm(algorithm);
+        if (YundocCryptoAlgorithms.JWT_HSM3.equals(normalized)) {
+            return true;
         }
+        return properties.isLegacyValidationEnabled()
+                && YundocCryptoAlgorithms.JWT_HS256.equals(normalized);
+    }
+
+    private String normalizedAlgorithm(String algorithm) {
+        if (!Texts.hasText(algorithm)) {
+            throw new YundocException(YundocErrorCode.TOKEN_INVALID);
+        }
+        return algorithm.trim().toUpperCase(Locale.ROOT);
     }
 
     private String base64Url(String value) {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(value.getBytes(StandardCharsets.UTF_8));
     }
 
-    private String base64Url(byte[] value) {
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(value);
-    }
 }

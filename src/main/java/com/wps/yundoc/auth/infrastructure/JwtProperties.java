@@ -1,5 +1,6 @@
 package com.wps.yundoc.auth.infrastructure;
 
+import com.wps.yundoc.common.crypto.YundocCryptoAlgorithms;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -29,6 +30,12 @@ public class JwtProperties {
     @Size(min = 32, max = 256)
     private String secret;
 
+    @NotBlank
+    @Size(max = 32)
+    private String algorithm = YundocCryptoAlgorithms.JWT_HSM3;
+
+    private boolean legacyValidationEnabled = true;
+
     private Duration ttl = Duration.ofMinutes(30);
 
     public String getIssuer() {
@@ -53,6 +60,22 @@ public class JwtProperties {
 
     public void setSecret(String secret) {
         this.secret = secret;
+    }
+
+    public String getAlgorithm() {
+        return algorithm;
+    }
+
+    public void setAlgorithm(String algorithm) {
+        this.algorithm = algorithm;
+    }
+
+    public boolean isLegacyValidationEnabled() {
+        return legacyValidationEnabled;
+    }
+
+    public void setLegacyValidationEnabled(boolean legacyValidationEnabled) {
+        this.legacyValidationEnabled = legacyValidationEnabled;
     }
 
     public Duration getTtl() {
